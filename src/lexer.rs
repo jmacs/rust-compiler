@@ -1,7 +1,3 @@
-extern crate regex;
-
-use regex::Regex;
-
 const NULL_CHAR: char = '\0';
 const ESCAPE_CHAR: char = '\\';
 const QUOTE: char = '\'';
@@ -10,52 +6,44 @@ const DBL_QUOTE: char = '"';
 #[derive(Debug, PartialEq)]
 pub enum Token {
     EOF,
-
-    IllegalChar(String),
-    InvalidNumber(String),
-
+    Illegal(char),
     Identifier(String),
     Keyword(Keyword),
-    StringLiteral(String),
-    NumberLiteral(String),
-    CharLiteral(String),
-    TemplateLiteral,
-    BoolLiteral(bool),
-    MultilineComment,
+    MultilineComment(String),
     Comment(String),
 
     //
-    // Delimiter
+    // Literals
     //
-    Backtick, // `
-    Colon,    // :
-    Comma,    // ,
-    DblQuote, // "
-    Dot,      // .
-    LBrace,   // {
-    LBracket, // [
-    LParen,   // (
-    Quote,    // '
-    RBrace,   // }
-    RBracket, // ]
-    RParen,   // )
-    Semi,     // ;
+    BoolLiteral(bool),
+    CharLiteral(String),
+    NumberLiteral(String),
+    StringLiteral(String),
+    TemplateLiteral(String),
 
     //
-    // Operator
+    // Delimiters + Operators
     //
-    At,               // @
     Amp,              // &
     Asterisk,         // *
-    Bang,             // !
+    At,               // @
     BSlash,           // \
+    Backtick,         // `
+    Bang,             // !
     Caret,            // ^
+    Colon,            // :
+    Comma,            // ,
+    DblQuote,         // "
+    DivideEqual,      // /=
+    Dot,              // .
     Equal,            // =
     EqualTo,          // ==
     FSlash,           // /
-    DivideEqual,      // /=
     GreaterThan,      // >
     GreaterThanEqual, // >=
+    LBrace,           // {
+    LBracket,         // [
+    LParen,           // (
     LessThan,         // <
     LessThanEqual,    // <=
     LogicalAnd,       // &&
@@ -69,6 +57,11 @@ pub enum Token {
     Plus,             // +
     PlusEqual,        // +=
     Question,         // ?
+    Quote,            // '
+    RBrace,           // }
+    RBracket,         // ]
+    RParen,           // )
+    Semi,             // ;
 }
 
 #[derive(Debug, PartialEq)]
@@ -84,7 +77,6 @@ pub enum Keyword {
     FUNC,
     IF,
     IMPL,
-    IMPORT,
     LET,
     MATCH,
     PUB,
@@ -92,6 +84,7 @@ pub enum Keyword {
     SELF,
     TRAIT,
     TYPE,
+    USE,
     VOID,
     WHERE,
     WHILE,
@@ -102,7 +95,7 @@ pub struct TokenResult {
     pub position: usize,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq)]
 pub enum ReadMode {
     Default,
     StringLiteral,
@@ -112,7 +105,7 @@ pub enum ReadMode {
 }
 
 pub struct Lexer {
-    mode: ReadMode,
+    read_mode: ReadMode,
     line: Vec<char>,
     character: char,
     position: usize,
@@ -122,8 +115,8 @@ pub struct Lexer {
 impl Lexer {
     pub fn new() -> Self {
         Self {
-            mode: ReadMode::Default,
             line: Vec::new(),
+            read_mode: ReadMode::Default,
             position: 0,
             read_position: 0,
             character: NULL_CHAR,
@@ -136,11 +129,15 @@ impl Lexer {
         self.position = 0;
         self.read_position = 0;
         self.next_char();
+        self.reset_read_mode_on_newline();
     }
 
     pub fn next_token(&mut self) -> Option<TokenResult> {
         let position = self.position;
-        match self.mode {
+        if self.character == NULL_CHAR {
+            return None;
+        }
+        match self.read_mode {
             ReadMode::Default => {
                 self.skip_whitespace();
                 let token = self.read_token();
@@ -163,34 +160,6 @@ impl Lexer {
             }
             ReadMode::MultilineString => {
                 None // TODO
-            }
-        }
-    }
-
-    fn next_char(&mut self) {
-        if self.read_position < self.line.len() {
-            let ch = self.line[self.read_position];
-            self.position = self.read_position;
-            self.read_position += 1;
-            self.character = ch;
-        } else {
-            self.character = NULL_CHAR;
-        }
-    }
-
-    fn peek_char(&mut self) -> char {
-        if self.read_position < self.line.len() {
-            self.line[self.read_position]
-        } else {
-            NULL_CHAR
-        }
-    }
-
-    fn skip_whitespace(&mut self) {
-        while is_whitespace(self.character) {
-            self.next_char();
-            if self.character == NULL_CHAR {
-                break;
             }
         }
     }
@@ -292,7 +261,7 @@ impl Lexer {
             QUOTE => return self.read_char_literal(),
             DBL_QUOTE => return self.read_string_literal(),
             //
-            //
+            // Else
             //
             ch => {
                 return match ch {
@@ -300,7 +269,7 @@ impl Lexer {
                     _ if is_digit(ch) => self.read_number_literal(),
                     _ => {
                         self.next_char();
-                        Token::IllegalChar(ch.to_string())
+                        Token::Illegal(ch)
                     }
                 }
             }
@@ -318,7 +287,7 @@ impl Lexer {
         }
         let start_pos = self.position;
         if !self.read_until_char(DBL_QUOTE) {
-            self.mode = ReadMode::Default;
+            self.read_mode = ReadMode::Default;
         }
         let literal = self.slice_line(start_pos, self.position);
         Token::StringLiteral(literal)
@@ -332,7 +301,7 @@ impl Lexer {
         }
         let start_pos = self.position;
         if !self.read_until_char(QUOTE) {
-            self.mode = ReadMode::Default;
+            self.read_mode = ReadMode::Default;
         }
         let literal = self.slice_line(start_pos, self.position);
         Token::CharLiteral(literal)
@@ -341,7 +310,7 @@ impl Lexer {
     fn read_literal_or_keyword(&mut self) -> Token {
         let start_pos = self.position;
         while self.character != NULL_CHAR {
-            if is_valid_identifier_char(self.character) {
+            if is_letter(self.character) || is_digit(self.character) {
                 self.next_char();
             }
         }
@@ -367,6 +336,7 @@ impl Lexer {
             "self" => Token::Keyword(Keyword::SELF),
             "trait" => Token::Keyword(Keyword::TRAIT),
             "type" => Token::Keyword(Keyword::TYPE),
+            "use" => Token::Keyword(Keyword::USE),
             "void" => Token::Keyword(Keyword::VOID),
             "where" => Token::Keyword(Keyword::WHERE),
             "while" => Token::Keyword(Keyword::WHILE),
@@ -383,12 +353,7 @@ impl Lexer {
             }
         }
         let literal = self.slice_line(start_pos, self.read_position);
-        let number_regex = Regex::new(r"^[0-9]+(?:_[0-9]+)*(?:\.[0-9]+(?:_[0-9]+)*)?$").unwrap();
-        if number_regex.is_match(&literal) {
-            Token::NumberLiteral(literal)
-        } else {
-            Token::InvalidNumber(literal)
-        }
+        Token::NumberLiteral(literal)
     }
 
     fn read_single_line_comment(&mut self) -> Token {
@@ -405,10 +370,10 @@ impl Lexer {
     }
 
     fn toggle_read_mode(&mut self, mode: ReadMode) {
-        return if self.mode == ReadMode::Default {
-            self.mode = mode;
+        return if self.read_mode == ReadMode::Default {
+            self.read_mode = mode;
         } else {
-            self.mode = ReadMode::Default;
+            self.read_mode = ReadMode::Default;
         };
     }
 
@@ -429,6 +394,43 @@ impl Lexer {
             self.next_char();
         }
     }
+
+    fn next_char(&mut self) {
+        if self.read_position < self.line.len() {
+            let ch = self.line[self.read_position];
+            self.position = self.read_position;
+            self.read_position += 1;
+            self.character = ch;
+        } else {
+            self.position = self.read_position;
+            self.character = NULL_CHAR;
+        }
+    }
+
+    fn peek_char(&mut self) -> char {
+        if self.read_position < self.line.len() {
+            self.line[self.read_position]
+        } else {
+            NULL_CHAR
+        }
+    }
+
+    fn skip_whitespace(&mut self) {
+        while is_whitespace(self.character) {
+            self.next_char();
+            if self.character == NULL_CHAR {
+                break;
+            }
+        }
+    }
+
+    fn reset_read_mode_on_newline(&mut self) {
+        // If the last line did not properly terminate a string or character,
+        // calling this function on a new line ensures that subsequent lines are lexed correctly.
+        if self.read_mode == ReadMode::StringLiteral || self.read_mode == ReadMode::CharLiteral {
+            self.read_mode = ReadMode::Default;
+        }
+    }
 }
 
 fn is_whitespace(ch: char) -> bool {
@@ -439,13 +441,9 @@ fn is_whitespace(ch: char) -> bool {
 }
 
 fn is_letter(ch: char) -> bool {
-    'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z'
+    'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '$' || ch == '_'
 }
 
 fn is_digit(ch: char) -> bool {
     '0' <= ch && ch <= '9'
-}
-
-fn is_valid_identifier_char(ch: char) -> bool {
-    is_letter(ch) || is_digit(ch) || ch == '_' || ch == '$'
 }

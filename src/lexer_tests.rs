@@ -14,7 +14,8 @@ fn read_tokens(input: &str) -> Vec<TokenResult> {
 }
 
 #[allow(dead_code)]
-fn assert_results(actual: Vec<TokenResult>, expected: Vec<TokenResult>) {
+fn assert_all_tokens(input: &str, expected: Vec<TokenResult>) {
+    let actual = read_tokens(input);
     assert_eq!(
         expected.len(),
         actual.len(),
@@ -39,167 +40,103 @@ fn assert_results(actual: Vec<TokenResult>, expected: Vec<TokenResult>) {
 }
 
 #[allow(dead_code)]
-fn assert_keyword(keyword_str: &str, keyword: Keyword) {
-    let mut lexer = Lexer::new();
-    lexer.read_line(keyword_str);
-    let token = lexer.next_token().unwrap().token;
-    assert_eq!(Token::Keyword(keyword), token);
+fn assert_keyword(input: &str, keyword: Keyword) {
+    let results = read_tokens(input);
+    assert_eq!(
+        results.len(),
+        1,
+        "Expected 1 keyword token from {} ({:?})",
+        input,
+        keyword
+    );
+    let expect = Token::Keyword(keyword);
+    assert_eq!(
+        expect, results[0].token,
+        "Expected {:?} to be {:?}",
+        results[0].token, expect
+    );
 }
 
 #[allow(dead_code)]
-fn assert_invalid_number(invalid_number: &str) {
-    let mut lexer = Lexer::new();
-    lexer.read_line(invalid_number);
-    let token = lexer.next_token().unwrap().token;
+fn assert_token(input: &str, expect_token: Token) {
+    let results = read_tokens(input);
+    assert_eq!(results.len(), 1, "{}", {
+        let token_strings: String = results
+            .iter()
+            .map(|r| format!("{}: {:?}", r.position, r.token))
+            .collect::<Vec<_>>()
+            .join("\n");
+        format!(
+            "Expected 1 {:?} token from '{}' but got {} tokens:\n{}",
+            expect_token,
+            input,
+            results.len(),
+            token_strings,
+        )
+    });
     assert_eq!(
-        Token::InvalidNumber(invalid_number.parse().unwrap()),
-        token,
-        "Expected '{}' to be an invalid number",
-        invalid_number
+        results[0].token, expect_token,
+        "Expected {:?} to be {:?}",
+        expect_token, results[0].token
     );
 }
 
 #[test]
 fn test_illegal_char() {
-    let results = read_tokens("☺");
-    assert_results(
-        results,
-        vec![TokenResult {
-            token: Token::IllegalChar(String::from("☺")),
-            position: 0,
-        }],
-    );
+    assert_token("✓", Token::Illegal('✓'));
+    assert_token("☺", Token::Illegal('☺'));
+    assert_token("☒", Token::Illegal('☒'));
+    assert_token("“", Token::Illegal('“'));
+    assert_token("”", Token::Illegal('”'));
 }
 
 #[test]
-fn test_self_terminating_delimiters() {
-    let results = read_tokens("{}[]():;.,`");
-    assert_results(
-        results,
-        vec![
-            TokenResult {
-                token: Token::LBrace,
-                position: 0,
-            },
-            TokenResult {
-                token: Token::RBrace,
-                position: 1,
-            },
-            TokenResult {
-                token: Token::LBracket,
-                position: 2,
-            },
-            TokenResult {
-                token: Token::RBracket,
-                position: 3,
-            },
-            TokenResult {
-                token: Token::LParen,
-                position: 4,
-            },
-            TokenResult {
-                token: Token::RParen,
-                position: 5,
-            },
-            TokenResult {
-                token: Token::Colon,
-                position: 6,
-            },
-            TokenResult {
-                token: Token::Semi,
-                position: 7,
-            },
-            TokenResult {
-                token: Token::Dot,
-                position: 8,
-            },
-            TokenResult {
-                token: Token::Comma,
-                position: 9,
-            },
-            TokenResult {
-                token: Token::Backtick,
-                position: 10,
-            },
-        ],
-    );
-}
-
-#[test]
-fn test_single_char_operators() {
-    let results = read_tokens("@&*!\\^=/><-%|+?");
-    assert_results(
-        results,
-        vec![
-            TokenResult {
-                token: Token::At,
-                position: 0,
-            },
-            TokenResult {
-                token: Token::Amp,
-                position: 1,
-            },
-            TokenResult {
-                token: Token::Asterisk,
-                position: 2,
-            },
-            TokenResult {
-                token: Token::Bang,
-                position: 3,
-            },
-            TokenResult {
-                token: Token::BSlash,
-                position: 4,
-            },
-            TokenResult {
-                token: Token::Caret,
-                position: 5,
-            },
-            TokenResult {
-                token: Token::Equal,
-                position: 6,
-            },
-            TokenResult {
-                token: Token::FSlash,
-                position: 7,
-            },
-            TokenResult {
-                token: Token::GreaterThan,
-                position: 8,
-            },
-            TokenResult {
-                token: Token::LessThan,
-                position: 9,
-            },
-            TokenResult {
-                token: Token::Minus,
-                position: 10,
-            },
-            TokenResult {
-                token: Token::Percent,
-                position: 11,
-            },
-            TokenResult {
-                token: Token::Pipe,
-                position: 12,
-            },
-            TokenResult {
-                token: Token::Plus,
-                position: 13,
-            },
-            TokenResult {
-                token: Token::Question,
-                position: 14,
-            },
-        ],
-    );
+fn test_operators_and_delimiters() {
+    assert_token("@", Token::At);
+    assert_token("&", Token::Amp);
+    assert_token("*", Token::Asterisk);
+    assert_token("!", Token::Bang);
+    assert_token(r#"\"#, Token::BSlash);
+    assert_token("^", Token::Caret);
+    assert_token("=", Token::Equal);
+    assert_token("/", Token::FSlash);
+    assert_token(">", Token::GreaterThan);
+    assert_token("<", Token::LessThan);
+    assert_token("-", Token::Minus);
+    assert_token("%", Token::Percent);
+    assert_token("|", Token::Pipe);
+    assert_token("+", Token::Plus);
+    assert_token("?", Token::Question);
+    assert_token("`", Token::Backtick);
+    assert_token(":", Token::Colon);
+    assert_token(",", Token::Comma);
+    assert_token(r#"""#, Token::DblQuote);
+    assert_token(".", Token::Dot);
+    assert_token("{", Token::LBrace);
+    assert_token("[", Token::LBracket);
+    assert_token("(", Token::LParen);
+    assert_token("'", Token::Quote);
+    assert_token("}", Token::RBrace);
+    assert_token("]", Token::RBracket);
+    assert_token(")", Token::RParen);
+    assert_token(";", Token::Semi);
+    assert_token("==", Token::EqualTo);
+    assert_token("+=", Token::PlusEqual);
+    assert_token("-=", Token::MinusEqual);
+    assert_token("/=", Token::DivideEqual);
+    assert_token(">=", Token::GreaterThanEqual);
+    assert_token("<=", Token::LessThanEqual);
+    assert_token("&&", Token::LogicalAnd);
+    assert_token("||", Token::LogicalOr);
+    assert_token("-=", Token::MinusEqual);
+    assert_token("*=", Token::MultiplyEqual);
+    assert_token("!=", Token::NotEqualTo);
 }
 
 #[test]
 fn test_string_literal() {
-    let results = read_tokens(r#""Make it so.""#);
-    assert_results(
-        results,
+    assert_all_tokens(
+        r#""Make it so.""#,
         vec![
             TokenResult {
                 token: Token::DblQuote,
@@ -219,9 +156,8 @@ fn test_string_literal() {
 
 #[test]
 fn test_char_literal() {
-    let results = read_tokens("'c'");
-    assert_results(
-        results,
+    assert_all_tokens(
+        "'c'",
         vec![
             TokenResult {
                 token: Token::Quote,
@@ -241,9 +177,8 @@ fn test_char_literal() {
 
 #[test]
 fn test_empty_string_literal() {
-    let results = read_tokens(r#""""#);
-    assert_results(
-        results,
+    assert_all_tokens(
+        r#""""#,
         vec![
             TokenResult {
                 token: Token::DblQuote,
@@ -259,9 +194,8 @@ fn test_empty_string_literal() {
 
 #[test]
 fn test_empty_char_literal() {
-    let results = read_tokens(r#"''"#);
-    assert_results(
-        results,
+    assert_all_tokens(
+        r#"''"#,
         vec![
             TokenResult {
                 token: Token::Quote,
@@ -276,10 +210,26 @@ fn test_empty_char_literal() {
 }
 
 #[test]
+fn test_unterminated_char_literal() {
+    assert_all_tokens(
+        "'c",
+        vec![
+            TokenResult {
+                token: Token::Quote,
+                position: 0,
+            },
+            TokenResult {
+                token: Token::CharLiteral(String::from("c")),
+                position: 1,
+            },
+        ],
+    );
+}
+
+#[test]
 fn test_string_literal_with_escaped_dbl_quote() {
-    let results = read_tokens(r#""\"Make it so\"""#);
-    assert_results(
-        results,
+    assert_all_tokens(
+        r#""\"Make it so\"""#,
         vec![
             TokenResult {
                 token: Token::DblQuote,
@@ -298,10 +248,26 @@ fn test_string_literal_with_escaped_dbl_quote() {
 }
 
 #[test]
+fn test_unterminated_string_literal() {
+    assert_all_tokens(
+        r#""Make it so"#,
+        vec![
+            TokenResult {
+                token: Token::DblQuote,
+                position: 0,
+            },
+            TokenResult {
+                token: Token::StringLiteral(String::from(r#"Make it so"#)),
+                position: 1,
+            },
+        ],
+    );
+}
+
+#[test]
 fn test_char_literal_with_escaped_quote() {
-    let results = read_tokens(r#"'\''"#);
-    assert_results(
-        results,
+    assert_all_tokens(
+        r#"'\''"#,
         vec![
             TokenResult {
                 token: Token::Quote,
@@ -320,50 +286,67 @@ fn test_char_literal_with_escaped_quote() {
 }
 
 #[test]
-fn test_bool_literal_true() {
-    let results = read_tokens("true");
-    assert_results(
-        results,
-        vec![TokenResult {
-            token: Token::BoolLiteral(true),
-            position: 0,
-        }],
-    );
+fn test_boolean_literals() {
+    assert_token("false", Token::BoolLiteral(false));
+    assert_token("true", Token::BoolLiteral(true));
 }
 
 #[test]
-fn test_bool_literal_false() {
-    let results = read_tokens("false");
-    assert_results(
-        results,
-        vec![TokenResult {
-            token: Token::BoolLiteral(false),
-            position: 0,
-        }],
+fn test_identifiers() {
+    assert_token(
+        // just letters
+        "foobar",
+        Token::Identifier(String::from("foobar")),
     );
-}
-
-#[test]
-fn test_identifier() {
-    let results = read_tokens("foobar");
-    assert_results(
-        results,
-        vec![TokenResult {
-            token: Token::Identifier(String::from("foobar")),
-            position: 0,
-        }],
+    assert_token(
+        // with trailing numbers
+        "foobar123",
+        Token::Identifier(String::from("foobar123")),
     );
-}
-
-#[test]
-fn test_identifier_with_numbers() {
-    let results = read_tokens("foobar1");
-    assert_results(
-        results,
-        vec![TokenResult {
-            token: Token::Identifier(String::from("foobar1")),
-            position: 0,
-        }],
+    assert_token(
+        // with trailing numbers
+        "foobar123",
+        Token::Identifier(String::from("foobar123")),
+    );
+    assert_token(
+        // with underscores
+        "foo_bar_123",
+        Token::Identifier(String::from("foo_bar_123")),
+    );
+    assert_token(
+        // with leading underscore
+        "_foobar",
+        Token::Identifier(String::from("_foobar")),
+    );
+    assert_token(
+        // with trailing underscore
+        "foobar_",
+        Token::Identifier(String::from("foobar_")),
+    );
+    assert_token(
+        // just underscore
+        "_",
+        Token::Identifier(String::from("_")),
+    );
+    assert_token(
+        // with dollar sign
+        "foo$bar$123",
+        Token::Identifier(String::from("foo$bar$123")),
+    );
+    assert_token(
+        // with leading dollar sign
+        "$foobar",
+        Token::Identifier(String::from("$foobar")),
+    );
+    assert_token(
+        // with trailing dollar sign
+        "foobar$",
+        Token::Identifier(String::from("foobar$")),
+    );
+    assert_token(
+        // just dollar sign
+        "$",
+        Token::Identifier(String::from("$")),
     );
 }
 
@@ -386,62 +369,50 @@ fn test_keywords() {
     assert_keyword("self", Keyword::SELF);
     assert_keyword("trait", Keyword::TRAIT);
     assert_keyword("type", Keyword::TYPE);
+    assert_keyword("use", Keyword::USE);
     assert_keyword("void", Keyword::VOID);
     assert_keyword("where", Keyword::WHERE);
     assert_keyword("while", Keyword::WHILE);
 }
 
 #[test]
-fn test_number_literal() {
-    let results = read_tokens("1234");
-    assert_results(
-        results,
-        vec![TokenResult {
-            token: Token::NumberLiteral(String::from("1234")),
-            position: 0,
-        }],
+fn test_number_literals() {
+    assert_token(
+        //
+        "1234",
+        Token::NumberLiteral(String::from("1234")),
     );
-}
-
-#[test]
-fn test_number_with_decimals() {
-    let results = read_tokens("12.34");
-    assert_results(
-        results,
-        vec![TokenResult {
-            token: Token::NumberLiteral(String::from("12.34")),
-            position: 0,
-        }],
+    assert_token(
+        //
+        "12.34",
+        Token::NumberLiteral(String::from("12.34")),
     );
-}
-
-#[test]
-fn test_number_literal_with_separators() {
-    let results = read_tokens("123_456");
-    assert_results(
-        results,
-        vec![TokenResult {
-            token: Token::NumberLiteral(String::from("123_456")),
-            position: 0,
-        }],
+    assert_token(
+        //
+        "12.",
+        Token::NumberLiteral(String::from("12.")),
     );
-}
-
-#[test]
-fn test_number_literal_with_letters() {
-    assert_invalid_number("1234foo");
-    assert_invalid_number("1234_foo");
-    assert_invalid_number("12__34");
-    assert_invalid_number("1234_");
-    assert_invalid_number("1234.");
-    assert_invalid_number("1234.g");
+    assert_token(
+        //
+        "123_456_789",
+        Token::NumberLiteral(String::from("123_456_789")),
+    );
+    assert_token(
+        //
+        "123_",
+        Token::NumberLiteral(String::from("123_")),
+    );
+    assert_token(
+        //
+        "123abc",
+        Token::NumberLiteral(String::from("123abc")),
+    );
 }
 
 #[test]
 fn test_comment() {
-    let results = read_tokens("// comment");
-    assert_results(
-        results,
+    assert_all_tokens(
+        "// comment",
         vec![TokenResult {
             token: Token::Comment(String::from("// comment")),
             position: 0,
