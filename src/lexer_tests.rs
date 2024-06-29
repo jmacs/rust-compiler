@@ -1,7 +1,6 @@
-extern crate rust_compiler;
+use crate::lexer::*;
 
-use rust_compiler::lexer::*;
-
+#[allow(dead_code)]
 fn read_tokens(input: &str) -> Vec<TokenResult> {
     let mut lexer = Lexer::new();
     let mut results: Vec<TokenResult> = Vec::new();
@@ -14,8 +13,15 @@ fn read_tokens(input: &str) -> Vec<TokenResult> {
     results
 }
 
+#[allow(dead_code)]
 fn assert_results(actual: Vec<TokenResult>, expected: Vec<TokenResult>) {
-    assert_eq!(expected.len(), actual.len(), "Unexpected number of results");
+    assert_eq!(
+        expected.len(),
+        actual.len(),
+        "Expected {} results but got {}",
+        expected.len(),
+        actual.len()
+    );
 
     for (index, left) in expected.iter().enumerate() {
         let right = &actual[index];
@@ -32,11 +38,25 @@ fn assert_results(actual: Vec<TokenResult>, expected: Vec<TokenResult>) {
     }
 }
 
+#[allow(dead_code)]
 fn assert_keyword(keyword_str: &str, keyword: Keyword) {
     let mut lexer = Lexer::new();
     lexer.read_line(keyword_str);
     let token = lexer.next_token().unwrap().token;
     assert_eq!(Token::Keyword(keyword), token);
+}
+
+#[allow(dead_code)]
+fn assert_invalid_number(invalid_number: &str) {
+    let mut lexer = Lexer::new();
+    lexer.read_line(invalid_number);
+    let token = lexer.next_token().unwrap().token;
+    assert_eq!(
+        Token::InvalidNumber(invalid_number.parse().unwrap()),
+        token,
+        "Expected '{}' to be an invalid number",
+        invalid_number
+    );
 }
 
 #[test]
@@ -369,4 +389,62 @@ fn test_keywords() {
     assert_keyword("void", Keyword::VOID);
     assert_keyword("where", Keyword::WHERE);
     assert_keyword("while", Keyword::WHILE);
+}
+
+#[test]
+fn test_number_literal() {
+    let results = read_tokens("1234");
+    assert_results(
+        results,
+        vec![TokenResult {
+            token: Token::NumberLiteral(String::from("1234")),
+            position: 0,
+        }],
+    );
+}
+
+#[test]
+fn test_number_with_decimals() {
+    let results = read_tokens("12.34");
+    assert_results(
+        results,
+        vec![TokenResult {
+            token: Token::NumberLiteral(String::from("12.34")),
+            position: 0,
+        }],
+    );
+}
+
+#[test]
+fn test_number_literal_with_separators() {
+    let results = read_tokens("123_456");
+    assert_results(
+        results,
+        vec![TokenResult {
+            token: Token::NumberLiteral(String::from("123_456")),
+            position: 0,
+        }],
+    );
+}
+
+#[test]
+fn test_number_literal_with_letters() {
+    assert_invalid_number("1234foo");
+    assert_invalid_number("1234_foo");
+    assert_invalid_number("12__34");
+    assert_invalid_number("1234_");
+    assert_invalid_number("1234.");
+    assert_invalid_number("1234.g");
+}
+
+#[test]
+fn test_comment() {
+    let results = read_tokens("// comment");
+    assert_results(
+        results,
+        vec![TokenResult {
+            token: Token::Comment(String::from("// comment")),
+            position: 0,
+        }],
+    );
 }
