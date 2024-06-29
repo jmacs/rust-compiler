@@ -323,17 +323,13 @@ impl Lexer {
     }
 
     fn read_number_literal(&mut self) -> Token {
-        let mut number_kind = NumberKind::Integer;
         let start_pos = self.position;
         let lookahead = self.peek_char();
+
+        // Hexadecimal
         if self.character == '0' && (lookahead == 'X' || lookahead == 'x') {
             self.next_char();
-            while self.character != NULL_CHAR {
-                self.next_char();
-                if !is_hex(self.character) {
-                    break;
-                }
-            }
+            self.read_while(|ch| !is_hex(ch));
             let literal = self.slice_line(start_pos, self.position);
             return Token::NumberLiteral(Number {
                 kind: NumberKind::Hexadecimal,
@@ -341,39 +337,33 @@ impl Lexer {
                 postfix: None,
             });
         }
-        while self.character != NULL_CHAR {
-            self.next_char();
-            if !is_valid_number_literal_char(self.character) {
-                break;
-            }
-        }
+
+        // Integer
+        let mut number_kind = NumberKind::Integer;
+        self.read_while(|ch| !is_valid_number_literal_char(ch));
+
+        // Decimal
         if self.character == '.' && is_digit(self.peek_char()) {
             number_kind = NumberKind::Decimal;
             self.next_char();
-            while self.character != NULL_CHAR {
-                self.next_char();
-                if !is_valid_number_literal_char(self.character) {
-                    break;
-                }
-            }
+            self.read_while(|ch| !is_valid_number_literal_char(ch));
         }
-        let mut postfix: Option<String> = None;
-        let literal = self.slice_line(start_pos, self.position);
+
+        let number_value = self.slice_line(start_pos, self.position);
+
+        // Postfix
+        let mut postfix_opt: Option<String> = None;
         if is_alpha(self.character) {
             let postfix_start = self.position;
-            while self.character != NULL_CHAR {
-                self.next_char();
-                if !is_alpha(self.character) {
-                    break;
-                }
-            }
-            let postfix_value = self.slice_line(postfix_start, self.position);
-            postfix = Some(postfix_value);
+            self.read_while(|ch| !is_alpha(ch));
+            let postfix_str = self.slice_line(postfix_start, self.position);
+            postfix_opt = Some(postfix_str);
         }
+
         Token::NumberLiteral(Number {
             kind: number_kind,
-            value: literal,
-            postfix,
+            value: number_value,
+            postfix: postfix_opt,
         })
     }
 
@@ -451,6 +441,18 @@ impl Lexer {
     fn read_until_end(&mut self) {
         while self.character != NULL_CHAR {
             self.next_char();
+        }
+    }
+
+    fn read_while<F>(&mut self, mut condition: F)
+    where
+        F: FnMut(char) -> bool,
+    {
+        while self.character != NULL_CHAR {
+            self.next_char();
+            if condition(self.character) {
+                break;
+            }
         }
     }
 
