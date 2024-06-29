@@ -16,13 +16,26 @@ fn read_tokens(input: &str) -> Vec<TokenResult> {
 #[allow(dead_code)]
 fn assert_all_tokens(input: &str, expected: Vec<TokenResult>) {
     let actual = read_tokens(input);
-    assert_eq!(
-        expected.len(),
-        actual.len(),
-        "Expected {} results but got {}",
-        expected.len(),
-        actual.len()
-    );
+    assert_eq!(expected.len(), actual.len(), "{}", {
+        let actual_tokens: String = actual
+            .iter()
+            .map(|r| format!("{}: {:?}", r.position, r.token))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let expected_tokens: String = expected
+            .iter()
+            .map(|r| format!("{}: {:?}", r.position, r.token))
+            .collect::<Vec<_>>()
+            .join("\n");
+        format!(
+            "Expected {} token results from '{}' but got {} tokens:\n\nExpected:\n{}\n\nActual:\n{}",
+            expected.len(),
+            input,
+            actual.len(),
+            expected_tokens,
+            actual_tokens,
+        )
+    });
 
     for (index, left) in expected.iter().enumerate() {
         let right = &actual[index];
@@ -33,8 +46,8 @@ fn assert_all_tokens(input: &str, expected: Vec<TokenResult>) {
         );
         assert_eq!(
             left.position, right.position,
-            "Unexpected position {:?}",
-            left.token
+            "Expected token '{:?}' to be in position {} but was at {}",
+            left.token, left.position, right.position,
         );
     }
 }
@@ -143,7 +156,7 @@ fn test_string_literal() {
                 position: 0,
             },
             TokenResult {
-                token: Token::StringLiteral(String::from("Make it so.")),
+                token: Token::StringLiteral("Make it so.".to_string()),
                 position: 1,
             },
             TokenResult {
@@ -164,7 +177,7 @@ fn test_char_literal() {
                 position: 0,
             },
             TokenResult {
-                token: Token::CharLiteral(String::from("c")),
+                token: Token::CharLiteral("c".to_string()),
                 position: 1,
             },
             TokenResult {
@@ -219,7 +232,7 @@ fn test_unterminated_char_literal() {
                 position: 0,
             },
             TokenResult {
-                token: Token::CharLiteral(String::from("c")),
+                token: Token::CharLiteral("c".to_string()),
                 position: 1,
             },
         ],
@@ -236,7 +249,7 @@ fn test_string_literal_with_escaped_dbl_quote() {
                 position: 0,
             },
             TokenResult {
-                token: Token::StringLiteral(String::from(r#"\"Make it so\""#)),
+                token: Token::StringLiteral(r#"\"Make it so\""#.to_string()),
                 position: 1,
             },
             TokenResult {
@@ -257,7 +270,7 @@ fn test_unterminated_string_literal() {
                 position: 0,
             },
             TokenResult {
-                token: Token::StringLiteral(String::from(r#"Make it so"#)),
+                token: Token::StringLiteral(r#"Make it so"#.to_string()),
                 position: 1,
             },
         ],
@@ -274,7 +287,7 @@ fn test_char_literal_with_escaped_quote() {
                 position: 0,
             },
             TokenResult {
-                token: Token::CharLiteral(String::from(r#"\'"#)),
+                token: Token::CharLiteral(r#"\'"#.to_string()),
                 position: 1,
             },
             TokenResult {
@@ -296,57 +309,215 @@ fn test_identifiers() {
     assert_token(
         // just letters
         "foobar",
-        Token::Identifier(String::from("foobar")),
+        Token::Identifier("foobar".to_string()),
     );
     assert_token(
         // with trailing numbers
         "foobar123",
-        Token::Identifier(String::from("foobar123")),
+        Token::Identifier("foobar123".to_string()),
     );
     assert_token(
         // with trailing numbers
         "foobar123",
-        Token::Identifier(String::from("foobar123")),
+        Token::Identifier("foobar123".to_string()),
     );
     assert_token(
         // with underscores
         "foo_bar_123",
-        Token::Identifier(String::from("foo_bar_123")),
+        Token::Identifier("foo_bar_123".to_string()),
     );
     assert_token(
         // with leading underscore
         "_foobar",
-        Token::Identifier(String::from("_foobar")),
+        Token::Identifier("_foobar".to_string()),
     );
     assert_token(
         // with trailing underscore
         "foobar_",
-        Token::Identifier(String::from("foobar_")),
+        Token::Identifier("foobar_".to_string()),
     );
     assert_token(
         // just underscore
         "_",
-        Token::Identifier(String::from("_")),
+        Token::Identifier("_".to_string()),
     );
-    assert_token(
-        // with dollar sign
-        "foo$bar$123",
-        Token::Identifier(String::from("foo$bar$123")),
+}
+
+#[test]
+fn test_number_literals() {
+    assert_all_tokens(
+        // integer
+        "1234",
+        vec![TokenResult {
+            position: 0,
+            token: Token::NumberLiteral(Number {
+                kind: NumberKind::Integer,
+                value: "1234".to_string(),
+                postfix: None,
+            }),
+        }],
     );
-    assert_token(
-        // with leading dollar sign
-        "$foobar",
-        Token::Identifier(String::from("$foobar")),
+    assert_all_tokens(
+        // decimal
+        "123.34",
+        vec![TokenResult {
+            position: 0,
+            token: Token::NumberLiteral(Number {
+                kind: NumberKind::Decimal,
+                value: "123.34".to_string(),
+                postfix: None,
+            }),
+        }],
     );
-    assert_token(
-        // with trailing dollar sign
-        "foobar$",
-        Token::Identifier(String::from("foobar$")),
+    assert_all_tokens(
+        // Hexadecimal
+        "0xFF",
+        vec![TokenResult {
+            position: 0,
+            token: Token::NumberLiteral(Number {
+                kind: NumberKind::Hexadecimal,
+                value: "0xFF".to_string(),
+                postfix: None,
+            }),
+        }],
     );
-    assert_token(
-        // just dollar sign
-        "$",
-        Token::Identifier(String::from("$")),
+    assert_all_tokens(
+        // Hexadecimal (mixed numbers and letters)
+        "0xabcdefABCDEF1234567890",
+        vec![TokenResult {
+            position: 0,
+            token: Token::NumberLiteral(Number {
+                kind: NumberKind::Hexadecimal,
+                value: "0xabcdefABCDEF1234567890".to_string(),
+                postfix: None,
+            }),
+        }],
+    );
+    assert_all_tokens(
+        // Malformed hexadecimal
+        "0x",
+        vec![TokenResult {
+            position: 0,
+            token: Token::NumberLiteral(Number {
+                kind: NumberKind::Hexadecimal,
+                value: "0x".to_string(),
+                postfix: None,
+            }),
+        }],
+    );
+    assert_all_tokens(
+        // decimal with trailing period
+        "123. ",
+        vec![
+            TokenResult {
+                position: 0,
+                token: Token::NumberLiteral(Number {
+                    kind: NumberKind::Integer,
+                    value: "123".to_string(),
+                    postfix: None,
+                }),
+            },
+            TokenResult {
+                position: 3,
+                token: Token::Dot,
+            },
+        ],
+    );
+    assert_all_tokens(
+        // negative integer
+        "-1234",
+        vec![TokenResult {
+            position: 0,
+            token: Token::NumberLiteral(Number {
+                kind: NumberKind::Integer,
+                value: "-1234".to_string(),
+                postfix: None,
+            }),
+        }],
+    );
+    assert_all_tokens(
+        // negative decimal
+        "-12.34",
+        vec![TokenResult {
+            position: 0,
+            token: Token::NumberLiteral(Number {
+                kind: NumberKind::Decimal,
+                value: "-12.34".to_string(),
+                postfix: None,
+            }),
+        }],
+    );
+    assert_all_tokens(
+        // with separators
+        "123_456_789",
+        vec![TokenResult {
+            position: 0,
+            token: Token::NumberLiteral(Number {
+                kind: NumberKind::Integer,
+                value: "123_456_789".to_string(),
+                postfix: None,
+            }),
+        }],
+    );
+    assert_all_tokens(
+        // with trailing separators
+        "123_",
+        vec![TokenResult {
+            position: 0,
+            token: Token::NumberLiteral(Number {
+                kind: NumberKind::Integer,
+                value: "123_".to_string(),
+                postfix: None,
+            }),
+        }],
+    );
+    assert_all_tokens(
+        // with postfix
+        "123abc",
+        vec![TokenResult {
+            position: 0,
+            token: Token::NumberLiteral(Number {
+                kind: NumberKind::Integer,
+                value: "123".to_string(),
+                postfix: Some("abc".to_string()),
+            }),
+        }],
+    );
+    assert_all_tokens(
+        // with legal postfix character
+        "123☺",
+        vec![
+            TokenResult {
+                position: 0,
+                token: Token::NumberLiteral(Number {
+                    kind: NumberKind::Integer,
+                    value: "123".to_string(),
+                    postfix: None,
+                }),
+            },
+            TokenResult {
+                token: Token::Illegal('☺'),
+                position: 3,
+            },
+        ],
+    );
+    assert_all_tokens(
+        // with trailing +
+        "123+",
+        vec![
+            TokenResult {
+                position: 0,
+                token: Token::NumberLiteral(Number {
+                    kind: NumberKind::Integer,
+                    value: "123".to_string(),
+                    postfix: None,
+                }),
+            },
+            TokenResult {
+                token: Token::Plus,
+                position: 3,
+            },
+        ],
     );
 }
 
@@ -376,45 +547,11 @@ fn test_keywords() {
 }
 
 #[test]
-fn test_number_literals() {
-    assert_token(
-        //
-        "1234",
-        Token::NumberLiteral(String::from("1234")),
-    );
-    assert_token(
-        //
-        "12.34",
-        Token::NumberLiteral(String::from("12.34")),
-    );
-    assert_token(
-        //
-        "12.",
-        Token::NumberLiteral(String::from("12.")),
-    );
-    assert_token(
-        //
-        "123_456_789",
-        Token::NumberLiteral(String::from("123_456_789")),
-    );
-    assert_token(
-        //
-        "123_",
-        Token::NumberLiteral(String::from("123_")),
-    );
-    assert_token(
-        //
-        "123abc",
-        Token::NumberLiteral(String::from("123abc")),
-    );
-}
-
-#[test]
 fn test_comment() {
     assert_all_tokens(
         "// comment",
         vec![TokenResult {
-            token: Token::Comment(String::from("// comment")),
+            token: Token::Comment("// comment".to_string()),
             position: 0,
         }],
     );

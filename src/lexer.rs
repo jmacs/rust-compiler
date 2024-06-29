@@ -17,7 +17,7 @@ pub enum Token {
     //
     BoolLiteral(bool),
     CharLiteral(String),
-    NumberLiteral(String),
+    NumberLiteral(Number),
     StringLiteral(String),
     TemplateLiteral(String),
 
@@ -88,6 +88,20 @@ pub enum Keyword {
     VOID,
     WHERE,
     WHILE,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum NumberKind {
+    Integer,
+    Decimal,
+    Hexadecimal,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Number {
+    pub kind: NumberKind,
+    pub value: String,
+    pub postfix: Option<String>,
 }
 
 pub struct TokenResult {
@@ -188,6 +202,7 @@ impl Lexer {
                     self.next_char();
                     Token::MinusEqual
                 }
+                _ if is_digit(lookahead) => return self.read_number_literal(),
                 _ => Token::Minus,
             },
             '!' => match lookahead {
@@ -265,8 +280,8 @@ impl Lexer {
             //
             ch => {
                 return match ch {
-                    _ if is_letter(ch) => self.read_literal_or_keyword(),
                     _ if is_digit(ch) => self.read_number_literal(),
+                    _ if is_alpha(ch) => self.read_alpha_literal(),
                     _ => {
                         self.next_char();
                         Token::Illegal(ch)
@@ -307,11 +322,67 @@ impl Lexer {
         Token::CharLiteral(literal)
     }
 
-    fn read_literal_or_keyword(&mut self) -> Token {
+    fn read_number_literal(&mut self) -> Token {
+        let mut number_kind = NumberKind::Integer;
+        let start_pos = self.position;
+        let lookahead = self.peek_char();
+        if self.character == '0' && (lookahead == 'X' || lookahead == 'x') {
+            self.next_char();
+            while self.character != NULL_CHAR {
+                self.next_char();
+                if !is_hex(self.character) {
+                    break;
+                }
+            }
+            let literal = self.slice_line(start_pos, self.position);
+            return Token::NumberLiteral(Number {
+                kind: NumberKind::Hexadecimal,
+                value: literal,
+                postfix: None,
+            });
+        }
+        while self.character != NULL_CHAR {
+            self.next_char();
+            if !is_valid_number_literal_char(self.character) {
+                break;
+            }
+        }
+        if self.character == '.' && is_digit(self.peek_char()) {
+            number_kind = NumberKind::Decimal;
+            self.next_char();
+            while self.character != NULL_CHAR {
+                self.next_char();
+                if !is_valid_number_literal_char(self.character) {
+                    break;
+                }
+            }
+        }
+        let mut postfix: Option<String> = None;
+        let literal = self.slice_line(start_pos, self.position);
+        if is_alpha(self.character) {
+            let postfix_start = self.position;
+            while self.character != NULL_CHAR {
+                self.next_char();
+                if !is_alpha(self.character) {
+                    break;
+                }
+            }
+            let postfix_value = self.slice_line(postfix_start, self.position);
+            postfix = Some(postfix_value);
+        }
+        Token::NumberLiteral(Number {
+            kind: number_kind,
+            value: literal,
+            postfix,
+        })
+    }
+
+    fn read_alpha_literal(&mut self) -> Token {
         let start_pos = self.position;
         while self.character != NULL_CHAR {
-            if is_letter(self.character) || is_digit(self.character) {
-                self.next_char();
+            self.next_char();
+            if !is_valid_ident_literal_char(self.character) {
+                break;
             }
         }
         let literal = self.slice_line(start_pos, self.read_position);
@@ -342,18 +413,6 @@ impl Lexer {
             "while" => Token::Keyword(Keyword::WHILE),
             _ => Token::Identifier(literal),
         }
-    }
-
-    fn read_number_literal(&mut self) -> Token {
-        let start_pos = self.position;
-        while self.character != NULL_CHAR {
-            self.next_char();
-            if is_whitespace(self.character) {
-                break;
-            }
-        }
-        let literal = self.slice_line(start_pos, self.read_position);
-        Token::NumberLiteral(literal)
     }
 
     fn read_single_line_comment(&mut self) -> Token {
@@ -440,10 +499,22 @@ fn is_whitespace(ch: char) -> bool {
     return false;
 }
 
-fn is_letter(ch: char) -> bool {
-    'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '$' || ch == '_'
+fn is_alpha(ch: char) -> bool {
+    'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
 }
 
 fn is_digit(ch: char) -> bool {
     '0' <= ch && ch <= '9'
+}
+
+fn is_hex(ch: char) -> bool {
+    is_digit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')
+}
+
+fn is_valid_ident_literal_char(ch: char) -> bool {
+    is_alpha(ch) || is_digit(ch)
+}
+
+fn is_valid_number_literal_char(ch: char) -> bool {
+    is_digit(ch) || ch == '_'
 }
