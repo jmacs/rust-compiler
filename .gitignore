@@ -1,0 +1,28 @@
+# Build artifacts
+/target/
+/test-output/
+**/*.rs.bk
+*.d
+
+# Temp files
+.temp
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+\#*\#
+
+# Logs and databases
+*.log
+*.sqlite
+*.sqlite-journal
+
+# OS specific ignores
+*.pdb
+*.ilk
+*.exp
+.DS_Store
+._*
