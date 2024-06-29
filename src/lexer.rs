@@ -375,7 +375,7 @@ impl Lexer {
                 break;
             }
         }
-        let literal = self.slice_line(start_pos, self.read_position);
+        let literal = self.slice_line(start_pos, self.position);
         match literal.as_str() {
             "true" => Token::BoolLiteral(true),
             "false" => Token::BoolLiteral(false),
