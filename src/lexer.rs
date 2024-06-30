@@ -1,121 +1,17 @@
+use crate::token::*;
+
 const NULL_CHAR: char = '\0';
 const ESCAPE_CHAR: char = '\\';
 const QUOTE: char = '\'';
 const DBL_QUOTE: char = '"';
 
 #[derive(Debug, PartialEq)]
-pub enum Token {
-    EOF,
-    Illegal(char),
-    Identifier(String),
-    Keyword(Keyword),
-    MultilineComment(String),
-    Comment(String),
-
-    //
-    // Literals
-    //
-    BoolLiteral(bool),
-    CharLiteral(String),
-    NumberLiteral(Number),
-    StringLiteral(String),
-    TemplateLiteral(String),
-
-    //
-    // Delimiters + Operators
-    //
-    Amp,              // &
-    Asterisk,         // *
-    At,               // @
-    BSlash,           // \
-    Backtick,         // `
-    Bang,             // !
-    Caret,            // ^
-    Colon,            // :
-    Comma,            // ,
-    DblQuote,         // "
-    DivideEqual,      // /=
-    Dot,              // .
-    Equal,            // =
-    EqualTo,          // ==
-    FSlash,           // /
-    GreaterThan,      // >
-    GreaterThanEqual, // >=
-    LBrace,           // {
-    LBracket,         // [
-    LParen,           // (
-    LessThan,         // <
-    LessThanEqual,    // <=
-    LogicalAnd,       // &&
-    LogicalOr,        // ||
-    Minus,            // -
-    MinusEqual,       // -=
-    MultiplyEqual,    // *=
-    NotEqualTo,       // !=
-    Percent,          // %
-    Pipe,             // |
-    Plus,             // +
-    PlusEqual,        // +=
-    Question,         // ?
-    Quote,            // '
-    RBrace,           // }
-    RBracket,         // ]
-    RParen,           // )
-    Semi,             // ;
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Keyword {
-    AS,
-    ASYNC,
-    AWAIT,
-    BREAK,
-    CONST,
-    CONTINUE,
-    ELSE,
-    FOR,
-    FUNC,
-    IF,
-    IMPL,
-    LET,
-    MATCH,
-    PUB,
-    RETURN,
-    SELF,
-    TRAIT,
-    TYPE,
-    USE,
-    VOID,
-    WHERE,
-    WHILE,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum NumberKind {
-    Integer,
-    Decimal,
-    Hexadecimal,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Number {
-    pub kind: NumberKind,
-    pub value: String,
-    pub postfix: Option<String>,
-}
-
-pub struct TokenResult {
-    pub token: Token,
-    pub position: usize,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum ReadMode {
+enum ReadMode {
     Default,
     StringLiteral,
     CharLiteral,
-    MultilineComment,
-    MultilineString,
+    // MultilineComment,
+    // MultilineString,
 }
 
 pub struct Lexer {
@@ -146,7 +42,7 @@ impl Lexer {
         self.reset_read_mode_on_newline();
     }
 
-    pub fn next_token(&mut self) -> Option<TokenResult> {
+    pub fn next_token(&mut self) -> Option<TokenFrame> {
         let position = self.position;
         if self.character == NULL_CHAR {
             return None;
@@ -156,24 +52,18 @@ impl Lexer {
                 self.skip_whitespace();
                 let token = self.read_token();
                 if token != Token::EOF {
-                    Some(TokenResult { token, position })
+                    Some(TokenFrame { token, position })
                 } else {
                     None
                 }
             }
             ReadMode::StringLiteral => {
                 let token = self.read_string_literal();
-                Some(TokenResult { token, position })
+                Some(TokenFrame { token, position })
             }
             ReadMode::CharLiteral => {
                 let token = self.read_char_literal();
-                Some(TokenResult { token, position })
-            }
-            ReadMode::MultilineComment => {
-                None // TODO
-            }
-            ReadMode::MultilineString => {
-                None // TODO
+                Some(TokenFrame { token, position })
             }
         }
     }

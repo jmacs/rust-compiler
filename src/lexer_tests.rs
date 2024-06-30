@@ -1,20 +1,19 @@
 use crate::lexer::*;
+use crate::token::*;
 
-#[allow(dead_code)]
-fn read_tokens(input: &str) -> Vec<TokenResult> {
+fn read_tokens(input: &str) -> Vec<TokenFrame> {
     let mut lexer = Lexer::new();
-    let mut results: Vec<TokenResult> = Vec::new();
+    let mut frames: Vec<TokenFrame> = Vec::new();
     lexer.read_line(input);
 
-    while let Some(result) = lexer.next_token() {
-        results.push(result);
+    while let Some(frame) = lexer.next_token() {
+        frames.push(frame);
     }
 
-    results
+    frames
 }
 
-#[allow(dead_code)]
-fn assert_all_tokens(input: &str, expected: Vec<TokenResult>) {
+fn assert_all_tokens(input: &str, expected: Vec<TokenFrame>) {
     let actual = read_tokens(input);
     assert_eq!(expected.len(), actual.len(), "{}", {
         let actual_tokens: String = actual
@@ -28,7 +27,7 @@ fn assert_all_tokens(input: &str, expected: Vec<TokenResult>) {
             .collect::<Vec<_>>()
             .join("\n");
         format!(
-            "Expected {} token results from '{}' but got {} tokens:\n\nExpected:\n{}\n\nActual:\n{}",
+            "Expected {} frames from '{}' but got {}:\n\nExpected:\n{}\n\nActual:\n{}",
             expected.len(),
             input,
             actual.len(),
@@ -52,11 +51,10 @@ fn assert_all_tokens(input: &str, expected: Vec<TokenResult>) {
     }
 }
 
-#[allow(dead_code)]
 fn assert_keyword(input: &str, keyword: Keyword) {
-    let results = read_tokens(input);
+    let frames = read_tokens(input);
     assert_eq!(
-        results.len(),
+        frames.len(),
         1,
         "Expected 1 keyword token from {} ({:?})",
         input,
@@ -64,17 +62,16 @@ fn assert_keyword(input: &str, keyword: Keyword) {
     );
     let expect = Token::Keyword(keyword);
     assert_eq!(
-        expect, results[0].token,
+        expect, frames[0].token,
         "Expected {:?} to be {:?}",
-        results[0].token, expect
+        frames[0].token, expect
     );
 }
 
-#[allow(dead_code)]
 fn assert_token(input: &str, expect_token: Token) {
-    let results = read_tokens(input);
-    assert_eq!(results.len(), 1, "{}", {
-        let token_strings: String = results
+    let frames = read_tokens(input);
+    assert_eq!(frames.len(), 1, "{}", {
+        let token_strings: String = frames
             .iter()
             .map(|r| format!("{}: {:?}", r.position, r.token))
             .collect::<Vec<_>>()
@@ -83,14 +80,14 @@ fn assert_token(input: &str, expect_token: Token) {
             "Expected 1 {:?} token from '{}' but got {} tokens:\n{}",
             expect_token,
             input,
-            results.len(),
+            frames.len(),
             token_strings,
         )
     });
     assert_eq!(
-        results[0].token, expect_token,
+        frames[0].token, expect_token,
         "Expected {:?} to be {:?}",
-        expect_token, results[0].token
+        expect_token, frames[0].token
     );
 }
 
@@ -151,15 +148,15 @@ fn test_string_literal() {
     assert_all_tokens(
         r#""Make it so.""#,
         vec![
-            TokenResult {
+            TokenFrame {
                 token: Token::DblQuote,
                 position: 0,
             },
-            TokenResult {
+            TokenFrame {
                 token: Token::StringLiteral("Make it so.".to_string()),
                 position: 1,
             },
-            TokenResult {
+            TokenFrame {
                 token: Token::DblQuote,
                 position: 12,
             },
@@ -172,15 +169,15 @@ fn test_char_literal() {
     assert_all_tokens(
         "'c'",
         vec![
-            TokenResult {
+            TokenFrame {
                 token: Token::Quote,
                 position: 0,
             },
-            TokenResult {
+            TokenFrame {
                 token: Token::CharLiteral("c".to_string()),
                 position: 1,
             },
-            TokenResult {
+            TokenFrame {
                 token: Token::Quote,
                 position: 2,
             },
@@ -193,11 +190,11 @@ fn test_empty_string_literal() {
     assert_all_tokens(
         r#""""#,
         vec![
-            TokenResult {
+            TokenFrame {
                 token: Token::DblQuote,
                 position: 0,
             },
-            TokenResult {
+            TokenFrame {
                 token: Token::DblQuote,
                 position: 1,
             },
@@ -210,11 +207,11 @@ fn test_empty_char_literal() {
     assert_all_tokens(
         r#"''"#,
         vec![
-            TokenResult {
+            TokenFrame {
                 token: Token::Quote,
                 position: 0,
             },
-            TokenResult {
+            TokenFrame {
                 token: Token::Quote,
                 position: 1,
             },
@@ -227,11 +224,11 @@ fn test_unterminated_char_literal() {
     assert_all_tokens(
         "'c",
         vec![
-            TokenResult {
+            TokenFrame {
                 token: Token::Quote,
                 position: 0,
             },
-            TokenResult {
+            TokenFrame {
                 token: Token::CharLiteral("c".to_string()),
                 position: 1,
             },
@@ -244,15 +241,15 @@ fn test_string_literal_with_escaped_dbl_quote() {
     assert_all_tokens(
         r#""\"Make it so\"""#,
         vec![
-            TokenResult {
+            TokenFrame {
                 token: Token::DblQuote,
                 position: 0,
             },
-            TokenResult {
+            TokenFrame {
                 token: Token::StringLiteral(r#"\"Make it so\""#.to_string()),
                 position: 1,
             },
-            TokenResult {
+            TokenFrame {
                 token: Token::DblQuote,
                 position: 15,
             },
@@ -265,11 +262,11 @@ fn test_unterminated_string_literal() {
     assert_all_tokens(
         r#""Make it so"#,
         vec![
-            TokenResult {
+            TokenFrame {
                 token: Token::DblQuote,
                 position: 0,
             },
-            TokenResult {
+            TokenFrame {
                 token: Token::StringLiteral(r#"Make it so"#.to_string()),
                 position: 1,
             },
@@ -282,15 +279,15 @@ fn test_char_literal_with_escaped_quote() {
     assert_all_tokens(
         r#"'\''"#,
         vec![
-            TokenResult {
+            TokenFrame {
                 token: Token::Quote,
                 position: 0,
             },
-            TokenResult {
+            TokenFrame {
                 token: Token::CharLiteral(r#"\'"#.to_string()),
                 position: 1,
             },
-            TokenResult {
+            TokenFrame {
                 token: Token::Quote,
                 position: 3,
             },
@@ -348,7 +345,7 @@ fn test_number_literals() {
     assert_all_tokens(
         // integer
         "1234",
-        vec![TokenResult {
+        vec![TokenFrame {
             position: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Integer,
@@ -360,7 +357,7 @@ fn test_number_literals() {
     assert_all_tokens(
         // decimal
         "123.34",
-        vec![TokenResult {
+        vec![TokenFrame {
             position: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Decimal,
@@ -372,7 +369,7 @@ fn test_number_literals() {
     assert_all_tokens(
         // Hexadecimal
         "0xFF",
-        vec![TokenResult {
+        vec![TokenFrame {
             position: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Hexadecimal,
@@ -384,7 +381,7 @@ fn test_number_literals() {
     assert_all_tokens(
         // Hexadecimal (mixed numbers and letters)
         "0xabcdefABCDEF1234567890",
-        vec![TokenResult {
+        vec![TokenFrame {
             position: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Hexadecimal,
@@ -396,7 +393,7 @@ fn test_number_literals() {
     assert_all_tokens(
         // Malformed hexadecimal
         "0x",
-        vec![TokenResult {
+        vec![TokenFrame {
             position: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Hexadecimal,
@@ -409,7 +406,7 @@ fn test_number_literals() {
         // decimal with trailing period
         "123. ",
         vec![
-            TokenResult {
+            TokenFrame {
                 position: 0,
                 token: Token::NumberLiteral(Number {
                     kind: NumberKind::Integer,
@@ -417,7 +414,7 @@ fn test_number_literals() {
                     postfix: None,
                 }),
             },
-            TokenResult {
+            TokenFrame {
                 position: 3,
                 token: Token::Dot,
             },
@@ -426,7 +423,7 @@ fn test_number_literals() {
     assert_all_tokens(
         // negative integer
         "-1234",
-        vec![TokenResult {
+        vec![TokenFrame {
             position: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Integer,
@@ -438,7 +435,7 @@ fn test_number_literals() {
     assert_all_tokens(
         // negative decimal
         "-12.34",
-        vec![TokenResult {
+        vec![TokenFrame {
             position: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Decimal,
@@ -450,7 +447,7 @@ fn test_number_literals() {
     assert_all_tokens(
         // with separators
         "123_456_789",
-        vec![TokenResult {
+        vec![TokenFrame {
             position: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Integer,
@@ -462,7 +459,7 @@ fn test_number_literals() {
     assert_all_tokens(
         // with trailing separators
         "123_",
-        vec![TokenResult {
+        vec![TokenFrame {
             position: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Integer,
@@ -474,7 +471,7 @@ fn test_number_literals() {
     assert_all_tokens(
         // with postfix
         "123abc",
-        vec![TokenResult {
+        vec![TokenFrame {
             position: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Integer,
@@ -487,7 +484,7 @@ fn test_number_literals() {
         // with legal postfix character
         "123☺",
         vec![
-            TokenResult {
+            TokenFrame {
                 position: 0,
                 token: Token::NumberLiteral(Number {
                     kind: NumberKind::Integer,
@@ -495,7 +492,7 @@ fn test_number_literals() {
                     postfix: None,
                 }),
             },
-            TokenResult {
+            TokenFrame {
                 token: Token::Illegal('☺'),
                 position: 3,
             },
@@ -505,7 +502,7 @@ fn test_number_literals() {
         // with trailing +
         "123+",
         vec![
-            TokenResult {
+            TokenFrame {
                 position: 0,
                 token: Token::NumberLiteral(Number {
                     kind: NumberKind::Integer,
@@ -513,7 +510,7 @@ fn test_number_literals() {
                     postfix: None,
                 }),
             },
-            TokenResult {
+            TokenFrame {
                 token: Token::Plus,
                 position: 3,
             },
@@ -550,7 +547,7 @@ fn test_keywords() {
 fn test_comment() {
     assert_all_tokens(
         "// comment",
-        vec![TokenResult {
+        vec![TokenFrame {
             token: Token::Comment("// comment".to_string()),
             position: 0,
         }],
