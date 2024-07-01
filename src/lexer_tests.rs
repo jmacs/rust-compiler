@@ -150,14 +150,17 @@ fn test_string_literal() {
         vec![
             TokenFrame {
                 token: Token::DblQuote,
+                line: 0,
                 position: 0,
             },
             TokenFrame {
                 token: Token::StringLiteral("Make it so.".to_string()),
+                line: 0,
                 position: 1,
             },
             TokenFrame {
                 token: Token::DblQuote,
+                line: 0,
                 position: 12,
             },
         ],
@@ -171,14 +174,17 @@ fn test_char_literal() {
         vec![
             TokenFrame {
                 token: Token::Quote,
+                line: 0,
                 position: 0,
             },
             TokenFrame {
                 token: Token::CharLiteral("c".to_string()),
+                line: 0,
                 position: 1,
             },
             TokenFrame {
                 token: Token::Quote,
+                line: 0,
                 position: 2,
             },
         ],
@@ -192,10 +198,12 @@ fn test_empty_string_literal() {
         vec![
             TokenFrame {
                 token: Token::DblQuote,
+                line: 0,
                 position: 0,
             },
             TokenFrame {
                 token: Token::DblQuote,
+                line: 0,
                 position: 1,
             },
         ],
@@ -209,10 +217,12 @@ fn test_empty_char_literal() {
         vec![
             TokenFrame {
                 token: Token::Quote,
+                line: 0,
                 position: 0,
             },
             TokenFrame {
                 token: Token::Quote,
+                line: 0,
                 position: 1,
             },
         ],
@@ -226,10 +236,12 @@ fn test_unterminated_char_literal() {
         vec![
             TokenFrame {
                 token: Token::Quote,
+                line: 0,
                 position: 0,
             },
             TokenFrame {
                 token: Token::CharLiteral("c".to_string()),
+                line: 0,
                 position: 1,
             },
         ],
@@ -243,14 +255,17 @@ fn test_string_literal_with_escaped_dbl_quote() {
         vec![
             TokenFrame {
                 token: Token::DblQuote,
+                line: 0,
                 position: 0,
             },
             TokenFrame {
                 token: Token::StringLiteral(r#"\"Make it so\""#.to_string()),
+                line: 0,
                 position: 1,
             },
             TokenFrame {
                 token: Token::DblQuote,
+                line: 0,
                 position: 15,
             },
         ],
@@ -264,10 +279,12 @@ fn test_unterminated_string_literal() {
         vec![
             TokenFrame {
                 token: Token::DblQuote,
+                line: 0,
                 position: 0,
             },
             TokenFrame {
                 token: Token::StringLiteral(r#"Make it so"#.to_string()),
+                line: 0,
                 position: 1,
             },
         ],
@@ -281,14 +298,17 @@ fn test_char_literal_with_escaped_quote() {
         vec![
             TokenFrame {
                 token: Token::Quote,
+                line: 0,
                 position: 0,
             },
             TokenFrame {
                 token: Token::CharLiteral(r#"\'"#.to_string()),
+                line: 0,
                 position: 1,
             },
             TokenFrame {
                 token: Token::Quote,
+                line: 0,
                 position: 3,
             },
         ],
@@ -347,6 +367,7 @@ fn test_number_literals() {
         "1234",
         vec![TokenFrame {
             position: 0,
+            line: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Integer,
                 value: "1234".to_string(),
@@ -359,6 +380,7 @@ fn test_number_literals() {
         "123.34",
         vec![TokenFrame {
             position: 0,
+            line: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Decimal,
                 value: "123.34".to_string(),
@@ -371,6 +393,7 @@ fn test_number_literals() {
         "0xFF",
         vec![TokenFrame {
             position: 0,
+            line: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Hexadecimal,
                 value: "0xFF".to_string(),
@@ -383,6 +406,7 @@ fn test_number_literals() {
         "0xabcdefABCDEF1234567890",
         vec![TokenFrame {
             position: 0,
+            line: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Hexadecimal,
                 value: "0xabcdefABCDEF1234567890".to_string(),
@@ -395,6 +419,7 @@ fn test_number_literals() {
         "0x",
         vec![TokenFrame {
             position: 0,
+            line: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Hexadecimal,
                 value: "0x".to_string(),
@@ -408,6 +433,7 @@ fn test_number_literals() {
         vec![
             TokenFrame {
                 position: 0,
+                line: 0,
                 token: Token::NumberLiteral(Number {
                     kind: NumberKind::Integer,
                     value: "123".to_string(),
@@ -416,6 +442,7 @@ fn test_number_literals() {
             },
             TokenFrame {
                 position: 3,
+                line: 0,
                 token: Token::Dot,
             },
         ],
@@ -425,6 +452,7 @@ fn test_number_literals() {
         "-1234",
         vec![TokenFrame {
             position: 0,
+            line: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Integer,
                 value: "-1234".to_string(),
@@ -437,6 +465,7 @@ fn test_number_literals() {
         "-12.34",
         vec![TokenFrame {
             position: 0,
+            line: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Decimal,
                 value: "-12.34".to_string(),
@@ -449,6 +478,7 @@ fn test_number_literals() {
         "123_456_789",
         vec![TokenFrame {
             position: 0,
+            line: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Integer,
                 value: "123_456_789".to_string(),
@@ -461,6 +491,7 @@ fn test_number_literals() {
         "123_",
         vec![TokenFrame {
             position: 0,
+            line: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Integer,
                 value: "123_".to_string(),
@@ -473,6 +504,7 @@ fn test_number_literals() {
         "123abc",
         vec![TokenFrame {
             position: 0,
+            line: 0,
             token: Token::NumberLiteral(Number {
                 kind: NumberKind::Integer,
                 value: "123".to_string(),
@@ -486,6 +518,7 @@ fn test_number_literals() {
         vec![
             TokenFrame {
                 position: 0,
+                line: 0,
                 token: Token::NumberLiteral(Number {
                     kind: NumberKind::Integer,
                     value: "123".to_string(),
@@ -495,6 +528,7 @@ fn test_number_literals() {
             TokenFrame {
                 token: Token::Illegal('☺'),
                 position: 3,
+                line: 0,
             },
         ],
     );
@@ -504,6 +538,7 @@ fn test_number_literals() {
         vec![
             TokenFrame {
                 position: 0,
+                line: 0,
                 token: Token::NumberLiteral(Number {
                     kind: NumberKind::Integer,
                     value: "123".to_string(),
@@ -512,6 +547,7 @@ fn test_number_literals() {
             },
             TokenFrame {
                 token: Token::Plus,
+                line: 0,
                 position: 3,
             },
         ],
@@ -549,6 +585,7 @@ fn test_comment() {
         "// comment",
         vec![TokenFrame {
             token: Token::Comment("// comment".to_string()),
+            line: 0,
             position: 0,
         }],
     );

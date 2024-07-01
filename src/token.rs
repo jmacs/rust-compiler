@@ -103,12 +103,14 @@ pub struct Number {
 pub struct TokenFrame {
     pub token: Token,
     pub position: usize,
+    pub line: usize,
 }
 
 impl TokenFrame {
     pub fn empty() -> Self {
         Self {
             position: 0,
+            line: 0,
             token: Token::EOF,
         }
     }

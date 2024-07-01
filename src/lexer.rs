@@ -19,6 +19,7 @@ pub struct Lexer {
     line: Vec<char>,
     character: char,
     position: usize,
+    line_num: usize,
     read_position: usize,
 }
 
@@ -29,11 +30,13 @@ impl Lexer {
             read_mode: ReadMode::Default,
             position: 0,
             read_position: 0,
+            line_num: 0,
             character: NULL_CHAR,
         }
     }
 
     pub fn read_line(&mut self, input: &str) {
+        self.line_num += 1;
         self.line.clear();
         self.line.extend(input.chars());
         self.position = 0;
@@ -44,28 +47,42 @@ impl Lexer {
 
     pub fn next_token(&mut self) -> Option<TokenFrame> {
         let position = self.position;
+        let line = self.line_num;
+
         if self.character == NULL_CHAR {
             return None;
         }
-        match self.read_mode {
+
+        let mut token_opt = match self.read_mode {
             ReadMode::Default => {
                 self.skip_whitespace();
                 let token = self.read_token();
-                if token != Token::EOF {
-                    Some(TokenFrame { token, position })
-                } else {
-                    None
+                if token == Token::EOF {
+                    return None;
                 }
+                Some(token)
             }
             ReadMode::StringLiteral => {
                 let token = self.read_string_literal();
-                Some(TokenFrame { token, position })
+                Some(token)
             }
             ReadMode::CharLiteral => {
                 let token = self.read_char_literal();
-                Some(TokenFrame { token, position })
+                Some(token)
             }
+        };
+
+        if token_opt.is_none() {
+            return None;
         }
+
+        let token = token_opt.take().unwrap();
+
+        Some(TokenFrame {
+            token,
+            position,
+            line,
+        })
     }
 
     fn read_token(&mut self) -> Token {
