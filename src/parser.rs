@@ -62,6 +62,10 @@ impl Parser {
             self.peek = Some(current);
             self.consume();
             return true;
+        } else if self.peek.is_some() {
+            self.current = self.peek.take().unwrap();
+            self.consume();
+            return true;
         }
         false
     }
