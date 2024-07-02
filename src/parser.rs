@@ -1,5 +1,5 @@
 use crate::ast::*;
-use crate::lexer::Lexer;
+use crate::lexer::*;
 use crate::token::*;
 use std::vec::IntoIter;
 
@@ -34,6 +34,13 @@ impl Parser {
         }
     }
 
+    fn location(&self) -> Location {
+        Location {
+            position: self.current.position,
+            line: self.current.line,
+        }
+    }
+
     fn advance_token(&mut self) -> bool {
         let current_option = self.iter.next();
         if let Some(current) = current_option {
@@ -47,21 +54,51 @@ impl Parser {
         false
     }
 
-    fn location(&self) -> Location {
-        Location {
-            position: self.current.position,
-            line: self.current.line,
+    #[allow(dead_code)]
+    fn peek_token(&self) -> &Token {
+        match &self.peek {
+            Some(peek) => &peek.token,
+            None => &Token::EOF,
         }
     }
 
-    fn expect<F>(&mut self, mut callback: F) -> Node
-    where
-        F: FnMut(&mut Self, &Token) -> Node,
-    {
-        if let Some(peek) = self.peek.clone() {
-            return callback(self, &peek.token);
+    fn current_token(&self) -> &Token {
+        &self.current.token
+    }
+
+    fn expect_token(&self, token: Token) -> Result<(), ParseError> {
+        return if self.current.token == token {
+            Ok(())
+        } else {
+            Err(ParseError::UnexpectedToken(token))
+        };
+    }
+
+    fn expect_keyword(&self, keywords: Vec<Keyword>) -> Result<(), ParseError> {
+        match &self.current.token {
+            Token::Keyword(kw) => {
+                if keywords.contains(kw) {
+                    Ok(())
+                } else {
+                    Err(ParseError::UnexpectedKeyword(kw.clone()))
+                }
+            }
+            token => Err(ParseError::UnexpectedToken(token.clone())),
         }
-        Node::UnexpectedEndOfInput
+    }
+
+    #[allow(dead_code)]
+    fn expect_peek(&self, token: Token) -> Result<(), ParseError> {
+        self.peek
+            .as_ref()
+            .ok_or(ParseError::UnexpectedEndOfInput)
+            .and_then(|peek| {
+                if peek.token == token {
+                    Ok(())
+                } else {
+                    Err(ParseError::UnexpectedToken(peek.token.clone()))
+                }
+            })
     }
 }
 
@@ -69,82 +106,111 @@ impl Parser {
 // Begin parse functions
 // ----------------------------------------------------------------------
 
+fn synchronize(_p: &mut Parser, program: &Program) {
+    // todo: skip tokens until a recovery point is found.
+    unimplemented!("synchronize() -> {:?}", program.errors);
+}
+
 fn create_program(p: &mut Parser) -> Program {
     let mut program = Program::new();
 
+    p.advance_token(); // prime the peek token
+
     while p.advance_token() {
-        let node = p.expect(|p, token| match token {
-            Token::Keyword(Keyword::LET) => parse_variable_statement(p),
-            Token::Keyword(Keyword::RETURN) => parse_return_statement(p),
-            Token::Keyword(Keyword::IF) => parse_if_statement(p),
-            _ => Node::UnexpectedToken(token.clone()),
-        });
-        program.statements.push(node);
+        match parse_root_statement(p) {
+            Ok(statement) => program.statements.push(statement),
+            Err(err) => {
+                program.errors.push(err);
+                synchronize(p, &program);
+            }
+        }
     }
 
     program
 }
 
-fn parse_variable_statement(p: &mut Parser) -> Node {
+fn parse_root_statement(p: &mut Parser) -> Result<Node, ParseError> {
+    let statement = match p.current_token() {
+        Token::Keyword(Keyword::LET) => parse_variable_statement(p),
+        Token::Keyword(Keyword::CONST) => parse_variable_statement(p),
+        token => Err(ParseError::UnexpectedToken(token.clone())),
+    }?;
+    Ok(statement)
+}
+
+fn parse_variable_statement(p: &mut Parser) -> Result<Node, ParseError> {
     let location = p.location();
 
-    let keyword = p.expect(|p, token| match token {
-        Token::Keyword(Keyword::LET) => parse_keyword(p),
-        Token::Keyword(Keyword::CONST) => parse_keyword(p),
-        _ => Node::UnexpectedToken(token.clone()),
-    });
+    p.expect_keyword(vec![Keyword::LET, Keyword::CONST])?;
+    let keyword = parse_keyword(p)?;
 
-    // todo: create expression node
+    let identifier = parse_identifier(p)?;
 
-    let ident = p.expect(|p, token| match token {
-        Token::Identifier(_) => parse_identifier(p),
-        _ => Node::UnexpectedToken(token.clone()),
-    });
+    p.expect_token(Token::Equal)?;
+    p.advance_token();
 
-    let operator = p.expect(|p, token| match token {
-        Token::Equal => parse_operator(p),
-        _ => Node::UnexpectedToken(token.clone()),
-    });
+    let literal = parse_literal(p)?;
 
-    let literal = p.expect(|p, token| match token {
-        Token::NumberLiteral(_) => parse_identifier(p),
-        _ => Node::UnexpectedToken(token.clone()),
-    });
+    let semi = match p.current_token() {
+        Token::Semi => parse_semi(p),
+        token => Err(ParseError::UnexpectedToken(token.clone())),
+    }?;
 
-    let semi = p.expect(|p, token| match token {
-        Token::Semi => parse_identifier(p),
-        _ => Node::UnexpectedToken(token.clone()),
-    });
-
-    Node::VariableStatement(VariableStatementNode {
+    Ok(Node::VariableDeclaration(VariableDeclarationNode {
         location,
         keyword: Box::new(keyword),
-        ident: Box::new(ident),
-        operator: Box::new(operator),
+        identifier: Box::new(identifier),
         literal: Box::new(literal),
         semi: Box::new(semi),
-    })
+    }))
 }
 
-fn parse_keyword(p: &mut Parser) -> Node {
+fn parse_keyword(p: &mut Parser) -> Result<Node, ParseError> {
+    let location = p.location();
+    let keyword = match p.current_token() {
+        Token::Keyword(keyword) => Ok(keyword.clone()),
+        token => Err(ParseError::UnexpectedToken(token.clone())),
+    }?;
     p.advance_token();
-    Node::Identifier(p.current.token.clone())
+    Ok(Node::Keyword(KeywordNode { location, keyword }))
 }
 
-fn parse_identifier(p: &mut Parser) -> Node {
+fn parse_identifier(p: &mut Parser) -> Result<Node, ParseError> {
+    let location = p.location();
+    let identifier = match p.current_token() {
+        Token::Identifier(identifier) => Ok(identifier.clone()),
+        token => Err(ParseError::UnexpectedToken(token.clone())),
+    }?;
     p.advance_token();
-    Node::Identifier(p.current.token.clone())
+    Ok(Node::Identifier(IdentifierNode {
+        location,
+        identifier,
+    }))
 }
 
-fn parse_operator(p: &mut Parser) -> Node {
+fn parse_literal(p: &mut Parser) -> Result<Node, ParseError> {
+    return match p.current_token() {
+        Token::NumberLiteral(_) => parse_number_literal(p),
+        token => Err(ParseError::UnexpectedToken(token.clone())),
+    };
+}
+
+fn parse_number_literal(p: &mut Parser) -> Result<Node, ParseError> {
+    let location = p.location();
+    let number = match p.current_token() {
+        Token::NumberLiteral(literal) => Ok(literal.clone()),
+        token => Err(ParseError::UnexpectedToken(token.clone())),
+    }?;
     p.advance_token();
-    Node::Operator(p.current.token.clone())
+    Ok(Node::NumberLiteral(NumberLiteralNode {
+        location,
+        kind: number.kind,
+        postfix: number.postfix,
+        value: number.value,
+    }))
 }
 
-fn parse_return_statement(_p: &mut Parser) -> Node {
-    Node::ReturnStatement(ReturnStatementNode {})
-}
-
-fn parse_if_statement(_p: &mut Parser) -> Node {
-    Node::IfStatement(IfStatementNode {})
+fn parse_semi(p: &mut Parser) -> Result<Node, ParseError> {
+    p.advance_token();
+    Ok(Node::Semi(p.current_token().clone()))
 }
