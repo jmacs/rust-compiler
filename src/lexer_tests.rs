@@ -348,22 +348,20 @@ fn test_number_literals() {
     assert_all_tokens(
         // decimal with trailing period
         "123. ",
-        vec![
-            TokenFrame {
-                position: 0,
-                line: 0,
-                token: Token::NumberLiteral(Number {
-                    kind: NumberKind::Integer,
-                    value: "123".to_string(),
-                    postfix: None,
-                }),
-            },
-            TokenFrame {
-                position: 3,
-                line: 0,
-                token: Token::Dot,
-            },
-        ],
+        vec![TokenFrame {
+            position: 0,
+            line: 0,
+            token: Token::Error(TokenError::MalformedDecimal),
+        }],
+    );
+    assert_all_tokens(
+        // multiple decimals
+        "123.456.789",
+        vec![TokenFrame {
+            position: 0,
+            line: 0,
+            token: Token::Error(TokenError::MalformedDecimal),
+        }],
     );
     assert_all_tokens(
         // with negactive prefix

@@ -65,6 +65,7 @@ pub enum TokenError {
     UnterminatedCharLiteral,
     UnterminatedStringLiteral,
     MalformedHexadecimal,
+    MalformedDecimal,
 }
 
 #[derive(Debug, PartialEq, Clone)]

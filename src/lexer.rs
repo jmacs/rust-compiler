@@ -239,6 +239,11 @@ impl Lexer {
             self.read_while(|ch| !is_valid_number_literal_char(ch));
         }
 
+        if self.character == '.' {
+            self.read_until_char(' ');
+            return Token::Error(TokenError::MalformedDecimal);
+        }
+
         let number_value = self.slice_line(start_pos, self.position);
 
         // Postfix
