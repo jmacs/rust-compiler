@@ -1,7 +1,7 @@
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     EOF,
-    Illegal(char),
+    Error(TokenError),
     Identifier(String),
     Keyword(Keyword),
     MultilineComment(String),
@@ -57,6 +57,14 @@ pub enum Token {
     RBracket,         // ]
     RParen,           // )
     Semi,             // ;
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum TokenError {
+    Illegal(char),
+    UnterminatedCharLiteral,
+    UnterminatedStringLiteral,
+    MalformedHexadecimal,
 }
 
 #[derive(Debug, PartialEq, Clone)]

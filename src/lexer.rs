@@ -8,8 +8,6 @@ const DBL_QUOTE: char = '"';
 #[derive(Debug, PartialEq)]
 enum ReadMode {
     Default,
-    StringLiteral,
-    CharLiteral,
     // MultilineComment,
     // MultilineString,
 }
@@ -42,7 +40,6 @@ impl Lexer {
         self.position = 0;
         self.read_position = 0;
         self.next_char();
-        self.reset_read_mode_on_newline();
     }
 
     pub fn next_token(&mut self) -> Option<TokenFrame> {
@@ -60,14 +57,6 @@ impl Lexer {
                 if token == Token::EOF {
                     return None;
                 }
-                Some(token)
-            }
-            ReadMode::StringLiteral => {
-                let token = self.read_string_literal();
-                Some(token)
-            }
-            ReadMode::CharLiteral => {
-                let token = self.read_char_literal();
                 Some(token)
             }
         };
@@ -109,7 +98,6 @@ impl Lexer {
                     self.next_char();
                     Token::MinusEqual
                 }
-                _ if is_digit(lookahead) => return self.read_number_literal(),
                 _ => Token::Minus,
             },
             '!' => match lookahead {
@@ -191,7 +179,7 @@ impl Lexer {
                     _ if is_alpha(ch) => self.read_alpha_literal(),
                     _ => {
                         self.next_char();
-                        Token::Illegal(ch)
+                        Token::Error(TokenError::Illegal(ch))
                     }
                 }
             }
@@ -202,30 +190,22 @@ impl Lexer {
     }
 
     fn read_string_literal(&mut self) -> Token {
-        if self.character == DBL_QUOTE {
-            self.next_char();
-            self.toggle_read_mode(ReadMode::StringLiteral);
-            return Token::DblQuote;
-        }
         let start_pos = self.position;
         if !self.read_until_char(DBL_QUOTE) {
-            self.read_mode = ReadMode::Default;
+            return Token::Error(TokenError::UnterminatedStringLiteral);
         }
-        let literal = self.slice_line(start_pos, self.position);
+        let literal = self.slice_line(start_pos + 1, self.position);
+        self.next_char();
         Token::StringLiteral(literal)
     }
 
     fn read_char_literal(&mut self) -> Token {
-        if self.character == QUOTE {
-            self.next_char();
-            self.toggle_read_mode(ReadMode::CharLiteral);
-            return Token::Quote;
-        }
         let start_pos = self.position;
         if !self.read_until_char(QUOTE) {
-            self.read_mode = ReadMode::Default;
+            return Token::Error(TokenError::UnterminatedCharLiteral);
         }
-        let literal = self.slice_line(start_pos, self.position);
+        let literal = self.slice_line(start_pos + 1, self.position);
+        self.next_char();
         Token::CharLiteral(literal)
     }
 
@@ -238,6 +218,9 @@ impl Lexer {
             self.next_char();
             self.read_while(|ch| !is_hex(ch));
             let literal = self.slice_line(start_pos, self.position);
+            if literal.len() == 2 {
+                return Token::Error(TokenError::MalformedHexadecimal);
+            }
             return Token::NumberLiteral(Number {
                 kind: NumberKind::Hexadecimal,
                 value: literal,
@@ -325,14 +308,6 @@ impl Lexer {
         sliced_chars.iter().collect()
     }
 
-    fn toggle_read_mode(&mut self, mode: ReadMode) {
-        return if self.read_mode == ReadMode::Default {
-            self.read_mode = mode;
-        } else {
-            self.read_mode = ReadMode::Default;
-        };
-    }
-
     fn read_until_char(&mut self, stop_char: char) -> bool {
         let mut last_char: char;
         while self.character != NULL_CHAR {
@@ -389,14 +364,6 @@ impl Lexer {
             if self.character == NULL_CHAR {
                 break;
             }
-        }
-    }
-
-    fn reset_read_mode_on_newline(&mut self) {
-        // If the last line did not properly terminate a string or character,
-        // calling this function on a new line ensures that subsequent lines are lexed correctly.
-        if self.read_mode == ReadMode::StringLiteral || self.read_mode == ReadMode::CharLiteral {
-            self.read_mode = ReadMode::Default;
         }
     }
 }

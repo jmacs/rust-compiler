@@ -93,11 +93,11 @@ fn assert_token(input: &str, expect_token: Token) {
 
 #[test]
 fn test_illegal_char() {
-    assert_token("✓", Token::Illegal('✓'));
-    assert_token("☺", Token::Illegal('☺'));
-    assert_token("☒", Token::Illegal('☒'));
-    assert_token("“", Token::Illegal('“'));
-    assert_token("”", Token::Illegal('”'));
+    assert_token("✓", Token::Error(TokenError::Illegal('✓')));
+    assert_token("☺", Token::Error(TokenError::Illegal('☺')));
+    assert_token("☒", Token::Error(TokenError::Illegal('☒')));
+    assert_token("“", Token::Error(TokenError::Illegal('“')));
+    assert_token("”", Token::Error(TokenError::Illegal('”')));
 }
 
 #[test]
@@ -120,12 +120,10 @@ fn test_operators_and_delimiters() {
     assert_token("`", Token::Backtick);
     assert_token(":", Token::Colon);
     assert_token(",", Token::Comma);
-    assert_token(r#"""#, Token::DblQuote);
     assert_token(".", Token::Dot);
     assert_token("{", Token::LBrace);
     assert_token("[", Token::LBracket);
     assert_token("(", Token::LParen);
-    assert_token("'", Token::Quote);
     assert_token("}", Token::RBrace);
     assert_token("]", Token::RBracket);
     assert_token(")", Token::RParen);
@@ -147,23 +145,11 @@ fn test_operators_and_delimiters() {
 fn test_string_literal() {
     assert_all_tokens(
         r#""Make it so.""#,
-        vec![
-            TokenFrame {
-                token: Token::DblQuote,
-                line: 0,
-                position: 0,
-            },
-            TokenFrame {
-                token: Token::StringLiteral("Make it so.".to_string()),
-                line: 0,
-                position: 1,
-            },
-            TokenFrame {
-                token: Token::DblQuote,
-                line: 0,
-                position: 12,
-            },
-        ],
+        vec![TokenFrame {
+            token: Token::StringLiteral("Make it so.".to_string()),
+            line: 0,
+            position: 0,
+        }],
     );
 }
 
@@ -171,23 +157,11 @@ fn test_string_literal() {
 fn test_char_literal() {
     assert_all_tokens(
         "'c'",
-        vec![
-            TokenFrame {
-                token: Token::Quote,
-                line: 0,
-                position: 0,
-            },
-            TokenFrame {
-                token: Token::CharLiteral("c".to_string()),
-                line: 0,
-                position: 1,
-            },
-            TokenFrame {
-                token: Token::Quote,
-                line: 0,
-                position: 2,
-            },
-        ],
+        vec![TokenFrame {
+            token: Token::CharLiteral("c".to_string()),
+            line: 0,
+            position: 0,
+        }],
     );
 }
 
@@ -195,18 +169,11 @@ fn test_char_literal() {
 fn test_empty_string_literal() {
     assert_all_tokens(
         r#""""#,
-        vec![
-            TokenFrame {
-                token: Token::DblQuote,
-                line: 0,
-                position: 0,
-            },
-            TokenFrame {
-                token: Token::DblQuote,
-                line: 0,
-                position: 1,
-            },
-        ],
+        vec![TokenFrame {
+            token: Token::StringLiteral("".to_string()),
+            line: 0,
+            position: 0,
+        }],
     );
 }
 
@@ -214,18 +181,11 @@ fn test_empty_string_literal() {
 fn test_empty_char_literal() {
     assert_all_tokens(
         r#"''"#,
-        vec![
-            TokenFrame {
-                token: Token::Quote,
-                line: 0,
-                position: 0,
-            },
-            TokenFrame {
-                token: Token::Quote,
-                line: 0,
-                position: 1,
-            },
-        ],
+        vec![TokenFrame {
+            token: Token::CharLiteral("".to_string()),
+            line: 0,
+            position: 0,
+        }],
     );
 }
 
@@ -233,18 +193,11 @@ fn test_empty_char_literal() {
 fn test_unterminated_char_literal() {
     assert_all_tokens(
         "'c",
-        vec![
-            TokenFrame {
-                token: Token::Quote,
-                line: 0,
-                position: 0,
-            },
-            TokenFrame {
-                token: Token::CharLiteral("c".to_string()),
-                line: 0,
-                position: 1,
-            },
-        ],
+        vec![TokenFrame {
+            token: Token::Error(TokenError::UnterminatedCharLiteral),
+            line: 0,
+            position: 0,
+        }],
     );
 }
 
@@ -252,23 +205,11 @@ fn test_unterminated_char_literal() {
 fn test_string_literal_with_escaped_dbl_quote() {
     assert_all_tokens(
         r#""\"Make it so\"""#,
-        vec![
-            TokenFrame {
-                token: Token::DblQuote,
-                line: 0,
-                position: 0,
-            },
-            TokenFrame {
-                token: Token::StringLiteral(r#"\"Make it so\""#.to_string()),
-                line: 0,
-                position: 1,
-            },
-            TokenFrame {
-                token: Token::DblQuote,
-                line: 0,
-                position: 15,
-            },
-        ],
+        vec![TokenFrame {
+            token: Token::StringLiteral(r#"\"Make it so\""#.to_string()),
+            line: 0,
+            position: 0,
+        }],
     );
 }
 
@@ -276,18 +217,11 @@ fn test_string_literal_with_escaped_dbl_quote() {
 fn test_unterminated_string_literal() {
     assert_all_tokens(
         r#""Make it so"#,
-        vec![
-            TokenFrame {
-                token: Token::DblQuote,
-                line: 0,
-                position: 0,
-            },
-            TokenFrame {
-                token: Token::StringLiteral(r#"Make it so"#.to_string()),
-                line: 0,
-                position: 1,
-            },
-        ],
+        vec![TokenFrame {
+            token: Token::Error(TokenError::UnterminatedStringLiteral),
+            line: 0,
+            position: 0,
+        }],
     );
 }
 
@@ -295,23 +229,11 @@ fn test_unterminated_string_literal() {
 fn test_char_literal_with_escaped_quote() {
     assert_all_tokens(
         r#"'\''"#,
-        vec![
-            TokenFrame {
-                token: Token::Quote,
-                line: 0,
-                position: 0,
-            },
-            TokenFrame {
-                token: Token::CharLiteral(r#"\'"#.to_string()),
-                line: 0,
-                position: 1,
-            },
-            TokenFrame {
-                token: Token::Quote,
-                line: 0,
-                position: 3,
-            },
-        ],
+        vec![TokenFrame {
+            token: Token::CharLiteral(r#"\'"#.to_string()),
+            line: 0,
+            position: 0,
+        }],
     );
 }
 
@@ -402,7 +324,7 @@ fn test_number_literals() {
         }],
     );
     assert_all_tokens(
-        // Hexadecimal (mixed numbers and letters)
+        // All possible hex characters
         "0xabcdefABCDEF1234567890",
         vec![TokenFrame {
             position: 0,
@@ -415,16 +337,12 @@ fn test_number_literals() {
         }],
     );
     assert_all_tokens(
-        // Malformed hexadecimal
+        // Malformed hex
         "0x",
         vec![TokenFrame {
             position: 0,
             line: 0,
-            token: Token::NumberLiteral(Number {
-                kind: NumberKind::Hexadecimal,
-                value: "0x".to_string(),
-                postfix: None,
-            }),
+            token: Token::Error(TokenError::MalformedHexadecimal),
         }],
     );
     assert_all_tokens(
@@ -448,30 +366,44 @@ fn test_number_literals() {
         ],
     );
     assert_all_tokens(
-        // negative integer
+        // with negactive prefix
         "-1234",
-        vec![TokenFrame {
-            position: 0,
-            line: 0,
-            token: Token::NumberLiteral(Number {
-                kind: NumberKind::Integer,
-                value: "-1234".to_string(),
-                postfix: None,
-            }),
-        }],
+        vec![
+            TokenFrame {
+                position: 0,
+                line: 0,
+                token: Token::Minus,
+            },
+            TokenFrame {
+                position: 1,
+                line: 0,
+                token: Token::NumberLiteral(Number {
+                    kind: NumberKind::Integer,
+                    value: "1234".to_string(),
+                    postfix: None,
+                }),
+            },
+        ],
     );
     assert_all_tokens(
         // negative decimal
         "-12.34",
-        vec![TokenFrame {
-            position: 0,
-            line: 0,
-            token: Token::NumberLiteral(Number {
-                kind: NumberKind::Decimal,
-                value: "-12.34".to_string(),
-                postfix: None,
-            }),
-        }],
+        vec![
+            TokenFrame {
+                position: 0,
+                line: 0,
+                token: Token::Minus,
+            },
+            TokenFrame {
+                position: 1,
+                line: 0,
+                token: Token::NumberLiteral(Number {
+                    kind: NumberKind::Decimal,
+                    value: "12.34".to_string(),
+                    postfix: None,
+                }),
+            },
+        ],
     );
     assert_all_tokens(
         // with separators
@@ -501,6 +433,19 @@ fn test_number_literals() {
     );
     assert_all_tokens(
         // with postfix
+        "123f",
+        vec![TokenFrame {
+            position: 0,
+            line: 0,
+            token: Token::NumberLiteral(Number {
+                kind: NumberKind::Integer,
+                value: "123".to_string(),
+                postfix: Some("f".to_string()),
+            }),
+        }],
+    );
+    assert_all_tokens(
+        // with invalid postfix (parser error)
         "123abc",
         vec![TokenFrame {
             position: 0,
@@ -526,7 +471,7 @@ fn test_number_literals() {
                 }),
             },
             TokenFrame {
-                token: Token::Illegal('☺'),
+                token: Token::Error(TokenError::Illegal('☺')),
                 position: 3,
                 line: 0,
             },
