@@ -111,15 +111,15 @@ pub struct Number {
 #[derive(Debug, PartialEq, Clone)]
 pub struct TokenFrame {
     pub token: Token,
-    pub position: usize,
-    pub line: usize,
+    pub start: usize,
+    pub end: usize,
 }
 
 impl TokenFrame {
     pub fn empty() -> Self {
         Self {
-            position: 0,
-            line: 0,
+            start: 0,
+            end: 0,
             token: Token::EOF,
         }
     }

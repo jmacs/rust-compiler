@@ -15,7 +15,7 @@ fn main() -> Result<()> {
             Ok(line) => {
                 lexer.read_line(line.as_str());
                 while let Some(result) = lexer.next_token() {
-                    println!("{}: {:?}", result.position, result.token);
+                    println!("{}: {:?}", result.start, result.token);
                 }
                 println!()
             }

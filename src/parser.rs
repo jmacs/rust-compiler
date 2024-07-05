@@ -34,10 +34,10 @@ impl Parser {
         }
     }
 
-    fn location(&self) -> Location {
-        Location {
-            position: self.current.position,
-            line: self.current.line,
+    fn span(&self) -> Span {
+        Span {
+            start: self.current.start,
+            end: self.current.end,
         }
     }
 
@@ -139,7 +139,7 @@ fn parse_root_statement(p: &mut Parser) -> Result<Node, ParseError> {
 }
 
 fn parse_variable_statement(p: &mut Parser) -> Result<Node, ParseError> {
-    let location = p.location();
+    let location = p.span();
 
     p.expect_keyword(vec![Keyword::LET, Keyword::CONST])?;
     let keyword = parse_keyword(p)?;
@@ -166,7 +166,7 @@ fn parse_variable_statement(p: &mut Parser) -> Result<Node, ParseError> {
 }
 
 fn parse_keyword(p: &mut Parser) -> Result<Node, ParseError> {
-    let location = p.location();
+    let location = p.span();
     let keyword = match p.current_token() {
         Token::Keyword(keyword) => Ok(keyword.clone()),
         token => Err(ParseError::UnexpectedToken(token.clone())),
@@ -176,7 +176,7 @@ fn parse_keyword(p: &mut Parser) -> Result<Node, ParseError> {
 }
 
 fn parse_identifier(p: &mut Parser) -> Result<Node, ParseError> {
-    let location = p.location();
+    let location = p.span();
     let identifier = match p.current_token() {
         Token::Identifier(identifier) => Ok(identifier.clone()),
         token => Err(ParseError::UnexpectedToken(token.clone())),
@@ -196,13 +196,13 @@ fn parse_literal(p: &mut Parser) -> Result<Node, ParseError> {
 }
 
 fn parse_number_literal(p: &mut Parser) -> Result<Node, ParseError> {
-    let location = p.location();
+    let location = p.span();
     let number = match p.current_token() {
         Token::NumberLiteral(literal) => Ok(literal.clone()),
         token => Err(ParseError::UnexpectedToken(token.clone())),
     }?;
     p.advance_token();
-    Ok(Node::NumberLiteral(NumberLiteralNode {
+    Ok(Node::Number(NumberLiteralNode {
         location,
         kind: number.kind,
         postfix: number.postfix,
@@ -212,5 +212,6 @@ fn parse_number_literal(p: &mut Parser) -> Result<Node, ParseError> {
 
 fn parse_semi(p: &mut Parser) -> Result<Node, ParseError> {
     p.advance_token();
-    Ok(Node::Semi(p.current_token().clone()))
+    let location = p.span();
+    Ok(Node::Semi(location))
 }

@@ -18,18 +18,18 @@ impl Program {
 #[derive(Debug, PartialEq)]
 pub enum Node {
     VariableDeclaration(VariableDeclarationNode),
-    ReturnStatement(ReturnStatementNode),
-    IfStatement(IfStatementNode),
+    Return(ReturnNode),
+    If(IfNode),
     Keyword(KeywordNode),
     Identifier(IdentifierNode),
-    NumberLiteral(NumberLiteralNode),
-    Semi(Token),
+    Number(NumberLiteralNode),
+    Semi(Span),
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Location {
-    pub position: usize,
-    pub line: usize,
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
 }
 
 #[derive(Debug, PartialEq)]
@@ -41,7 +41,7 @@ pub enum ParseError {
 
 #[derive(Debug, PartialEq)]
 pub struct VariableDeclarationNode {
-    pub location: Location,
+    pub location: Span,
     pub keyword: Box<Node>,
     pub identifier: Box<Node>,
     pub literal: Box<Node>,
@@ -49,26 +49,26 @@ pub struct VariableDeclarationNode {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ReturnStatementNode {}
+pub struct ReturnNode {}
 
 #[derive(Debug, PartialEq)]
-pub struct IfStatementNode {}
+pub struct IfNode {}
 
 #[derive(Debug, PartialEq)]
 pub struct KeywordNode {
-    pub location: Location,
+    pub location: Span,
     pub keyword: Keyword,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct IdentifierNode {
-    pub location: Location,
+    pub location: Span,
     pub identifier: String,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct NumberLiteralNode {
-    pub location: Location,
+    pub location: Span,
     pub kind: NumberKind,
     pub value: String,
     pub postfix: Option<String>,

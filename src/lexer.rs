@@ -5,19 +5,10 @@ const ESCAPE_CHAR: char = '\\';
 const QUOTE: char = '\'';
 const DBL_QUOTE: char = '"';
 
-#[derive(Debug, PartialEq)]
-enum ReadMode {
-    Default,
-    // MultilineComment,
-    // MultilineString,
-}
-
 pub struct Lexer {
-    read_mode: ReadMode,
     line: Vec<char>,
     character: char,
     position: usize,
-    line_num: usize,
     read_position: usize,
 }
 
@@ -25,16 +16,13 @@ impl Lexer {
     pub fn new() -> Self {
         Self {
             line: Vec::new(),
-            read_mode: ReadMode::Default,
             position: 0,
             read_position: 0,
-            line_num: 0,
             character: NULL_CHAR,
         }
     }
 
     pub fn read_line(&mut self, input: &str) {
-        self.line_num += 1;
         self.line.clear();
         self.line.extend(input.chars());
         self.position = 0;
@@ -43,35 +31,20 @@ impl Lexer {
     }
 
     pub fn next_token(&mut self) -> Option<TokenFrame> {
-        let position = self.position;
-        let line = self.line_num;
-
         if self.character == NULL_CHAR {
             return None;
         }
 
-        let mut token_opt = match self.read_mode {
-            ReadMode::Default => {
-                self.skip_whitespace();
-                let token = self.read_token();
-                if token == Token::EOF {
-                    return None;
-                }
-                Some(token)
-            }
-        };
+        self.skip_whitespace();
+        let start = self.position;
+        let token = self.read_token();
+        let end = self.position;
 
-        if token_opt.is_none() {
+        return if token == Token::EOF {
             return None;
-        }
-
-        let token = token_opt.take().unwrap();
-
-        Some(TokenFrame {
-            token,
-            position,
-            line,
-        })
+        } else {
+            Some(TokenFrame { token, start, end })
+        };
     }
 
     fn read_token(&mut self) -> Token {
