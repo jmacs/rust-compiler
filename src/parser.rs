@@ -156,8 +156,8 @@ fn parse_variable_statement(p: &mut Parser) -> Result<Node, ParseError> {
         token => Err(ParseError::UnexpectedToken(token.clone())),
     }?;
 
-    Ok(Node::VariableDeclaration(VariableDeclarationNode {
-        location,
+    Ok(Node::Variable(VariableNode {
+        span: location,
         keyword: Box::new(keyword),
         identifier: Box::new(identifier),
         literal: Box::new(literal),
@@ -172,7 +172,10 @@ fn parse_keyword(p: &mut Parser) -> Result<Node, ParseError> {
         token => Err(ParseError::UnexpectedToken(token.clone())),
     }?;
     p.advance_token();
-    Ok(Node::Keyword(KeywordNode { location, keyword }))
+    Ok(Node::Keyword(KeywordNode {
+        span: location,
+        keyword,
+    }))
 }
 
 fn parse_identifier(p: &mut Parser) -> Result<Node, ParseError> {
@@ -183,7 +186,7 @@ fn parse_identifier(p: &mut Parser) -> Result<Node, ParseError> {
     }?;
     p.advance_token();
     Ok(Node::Identifier(IdentifierNode {
-        location,
+        span: location,
         identifier,
     }))
 }
@@ -203,7 +206,7 @@ fn parse_number_literal(p: &mut Parser) -> Result<Node, ParseError> {
     }?;
     p.advance_token();
     Ok(Node::Number(NumberLiteralNode {
-        location,
+        span: location,
         kind: number.kind,
         postfix: number.postfix,
         value: number.value,

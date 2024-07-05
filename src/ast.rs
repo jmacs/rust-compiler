@@ -17,7 +17,7 @@ impl Program {
 
 #[derive(Debug, PartialEq)]
 pub enum Node {
-    VariableDeclaration(VariableDeclarationNode),
+    Variable(VariableNode),
     Return(ReturnNode),
     If(IfNode),
     Keyword(KeywordNode),
@@ -40,8 +40,8 @@ pub enum ParseError {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct VariableDeclarationNode {
-    pub location: Span,
+pub struct VariableNode {
+    pub span: Span,
     pub keyword: Box<Node>,
     pub identifier: Box<Node>,
     pub literal: Box<Node>,
@@ -56,19 +56,19 @@ pub struct IfNode {}
 
 #[derive(Debug, PartialEq)]
 pub struct KeywordNode {
-    pub location: Span,
+    pub span: Span,
     pub keyword: Keyword,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct IdentifierNode {
-    pub location: Span,
+    pub span: Span,
     pub identifier: String,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct NumberLiteralNode {
-    pub location: Span,
+    pub span: Span,
     pub kind: NumberKind,
     pub value: String,
     pub postfix: Option<String>,
