@@ -185,7 +185,7 @@ fn parse_identifier(p: &mut Parser) -> Result<Node, ParseError> {
         token => Err(ParseError::UnexpectedToken(token.clone())),
     }?;
     p.advance_token();
-    Ok(Node::Identifier(IdentifierNode {
+    Ok(Node::Ident(IdentNode {
         span: location,
         identifier,
     }))

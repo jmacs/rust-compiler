@@ -21,7 +21,7 @@ pub enum Node {
     Return(ReturnNode),
     If(IfNode),
     Keyword(KeywordNode),
-    Identifier(IdentifierNode),
+    Ident(IdentNode),
     Number(NumberLiteralNode),
     Semi(Span),
 }
@@ -61,7 +61,7 @@ pub struct KeywordNode {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct IdentifierNode {
+pub struct IdentNode {
     pub span: Span,
     pub identifier: String,
 }
