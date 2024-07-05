@@ -205,7 +205,7 @@ fn parse_number_literal(p: &mut Parser) -> Result<Node, ParseError> {
         token => Err(ParseError::UnexpectedToken(token.clone())),
     }?;
     p.advance_token();
-    Ok(Node::Number(NumberLiteralNode {
+    Ok(Node::Number(NumberNode {
         span: location,
         kind: number.kind,
         postfix: number.postfix,

@@ -22,7 +22,7 @@ pub enum Node {
     If(IfNode),
     Keyword(KeywordNode),
     Ident(IdentNode),
-    Number(NumberLiteralNode),
+    Number(NumberNode),
     Semi(Span),
 }
 
@@ -67,7 +67,7 @@ pub struct IdentNode {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct NumberLiteralNode {
+pub struct NumberNode {
     pub span: Span,
     pub kind: NumberKind,
     pub value: String,
