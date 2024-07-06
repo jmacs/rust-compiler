@@ -29,7 +29,7 @@ pub enum Node {
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub enum ParseError {
-    UnexpectedToken(Token),
+    UnexpectedToken(TokenFrame),
     UnexpectedEndOfInput,
     UnexpectedKeyword(Keyword),
 }

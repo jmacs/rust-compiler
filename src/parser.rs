@@ -87,11 +87,15 @@ impl Parser {
         &self.current.token
     }
 
+    fn current_frame(&self) -> &TokenFrame {
+        &self.current
+    }
+
     fn expect_token(&self, token: Token) -> Result<(), ParseError> {
         return if self.current.token == token {
             Ok(())
         } else {
-            Err(ParseError::UnexpectedToken(token))
+            Err(ParseError::UnexpectedToken(self.current.clone()))
         };
     }
 
@@ -104,7 +108,7 @@ impl Parser {
                     Err(ParseError::UnexpectedKeyword(kw.clone()))
                 }
             }
-            token => Err(ParseError::UnexpectedToken(token.clone())),
+            _ => Err(ParseError::UnexpectedToken(self.current.clone())),
         }
     }
 
@@ -117,7 +121,7 @@ impl Parser {
                 if peek.token == token {
                     Ok(())
                 } else {
-                    Err(ParseError::UnexpectedToken(peek.token.clone()))
+                    Err(ParseError::UnexpectedToken(peek.clone()))
                 }
             })
     }
@@ -127,9 +131,12 @@ impl Parser {
 // Begin parse functions
 // ----------------------------------------------------------------------
 
-fn synchronize(_p: &mut Parser, program: &Program) {
+fn unexpected_token(p: &mut Parser) -> ParseError {
+    ParseError::UnexpectedToken(p.current_frame().clone())
+}
+
+fn synchronize(_p: &mut Parser, _program: &Program) {
     // todo: skip tokens until a recovery point is found.
-    unimplemented!("synchronize() -> {:?}", program.errors);
 }
 
 fn create_program(p: &mut Parser) -> Program {
@@ -143,6 +150,7 @@ fn create_program(p: &mut Parser) -> Program {
             Err(err) => {
                 program.errors.push(err);
                 synchronize(p, &program);
+                return program;
             }
         }
     }
@@ -154,7 +162,7 @@ fn parse_root_statement(p: &mut Parser) -> Result<Node, ParseError> {
     let statement = match p.current_token() {
         Token::Keyword(Keyword::LET) => parse_variable_statement(p),
         Token::Keyword(Keyword::CONST) => parse_variable_statement(p),
-        token => Err(ParseError::UnexpectedToken(token.clone())),
+        _ => Err(unexpected_token(p)),
     }?;
     Ok(statement)
 }
@@ -174,7 +182,7 @@ fn parse_variable_statement(p: &mut Parser) -> Result<Node, ParseError> {
 
     let semi = match p.current_token() {
         Token::Semi => parse_semi(p),
-        token => Err(ParseError::UnexpectedToken(token.clone())),
+        _ => Err(unexpected_token(p)),
     }?;
 
     Ok(Node::Variable(VariableNode {
@@ -190,7 +198,7 @@ fn parse_keyword(p: &mut Parser) -> Result<Node, ParseError> {
     let location = p.span();
     let keyword = match p.current_token() {
         Token::Keyword(keyword) => Ok(keyword.clone()),
-        token => Err(ParseError::UnexpectedToken(token.clone())),
+        _ => Err(unexpected_token(p)),
     }?;
     p.advance_token();
     Ok(Node::Keyword(KeywordNode {
@@ -203,7 +211,7 @@ fn parse_identifier(p: &mut Parser) -> Result<Node, ParseError> {
     let location = p.span();
     let identifier = match p.current_token() {
         Token::Identifier(identifier) => Ok(identifier.clone()),
-        token => Err(ParseError::UnexpectedToken(token.clone())),
+        _ => Err(unexpected_token(p)),
     }?;
     p.advance_token();
     Ok(Node::Ident(IdentNode {
@@ -215,7 +223,7 @@ fn parse_identifier(p: &mut Parser) -> Result<Node, ParseError> {
 fn parse_literal(p: &mut Parser) -> Result<Node, ParseError> {
     return match p.current_token() {
         Token::NumberLiteral(_) => parse_number_literal(p),
-        token => Err(ParseError::UnexpectedToken(token.clone())),
+        _ => Err(unexpected_token(p)),
     };
 }
 
@@ -223,7 +231,7 @@ fn parse_number_literal(p: &mut Parser) -> Result<Node, ParseError> {
     let location = p.span();
     let number = match p.current_token() {
         Token::NumberLiteral(literal) => Ok(literal.clone()),
-        token => Err(ParseError::UnexpectedToken(token.clone())),
+        _ => Err(unexpected_token(p)),
     }?;
     p.advance_token();
     Ok(Node::Number(NumberNode {
