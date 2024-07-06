@@ -1,0 +1,48 @@
+{
+  "statements": [
+    {
+      "Variable": {
+        "span": {
+          "start": 0,
+          "end": 3
+        },
+        "keyword": {
+          "Keyword": {
+            "span": {
+              "start": 0,
+              "end": 3
+            },
+            "keyword": "LET"
+          }
+        },
+        "identifier": {
+          "Ident": {
+            "span": {
+              "start": 4,
+              "end": 5
+            },
+            "identifier": "x"
+          }
+        },
+        "literal": {
+          "Number": {
+            "span": {
+              "start": 8,
+              "end": 9
+            },
+            "kind": "Integer",
+            "value": "1",
+            "postfix": null
+          }
+        },
+        "semi": {
+          "Semi": {
+            "start": 9,
+            "end": 10
+          }
+        }
+      }
+    }
+  ],
+  "errors": []
+}

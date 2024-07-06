@@ -1,6 +1,7 @@
 use crate::token::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Program {
     pub statements: Vec<Node>,
     pub errors: Vec<ParseError>,
@@ -15,7 +16,7 @@ impl Program {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub enum Node {
     Variable(VariableNode),
     Return(ReturnNode),
@@ -26,20 +27,20 @@ pub enum Node {
     Semi(Span),
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Span {
-    pub start: usize,
-    pub end: usize,
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub enum ParseError {
     UnexpectedToken(Token),
     UnexpectedEndOfInput,
     UnexpectedKeyword(Keyword),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
+}
+
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct VariableNode {
     pub span: Span,
     pub keyword: Box<Node>,
@@ -48,25 +49,29 @@ pub struct VariableNode {
     pub semi: Box<Node>,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct ReturnNode {}
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+pub struct ReturnNode {
+    pub span: Span,
+}
 
-#[derive(Debug, PartialEq)]
-pub struct IfNode {}
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+pub struct IfNode {
+    pub span: Span,
+}
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct KeywordNode {
     pub span: Span,
     pub keyword: Keyword,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct IdentNode {
     pub span: Span,
     pub identifier: String,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct NumberNode {
     pub span: Span,
     pub kind: NumberKind,

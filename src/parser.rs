@@ -1,6 +1,9 @@
 use crate::ast::*;
 use crate::lexer::*;
 use crate::token::*;
+use std::fs::File;
+use std::io;
+use std::io::{BufRead, BufReader};
 use std::vec::IntoIter;
 
 pub struct Parser {
@@ -10,6 +13,24 @@ pub struct Parser {
 }
 
 impl Parser {
+    pub fn parse_file(file_path: &str) -> Result<Program, io::Error> {
+        let mut lexer = Lexer::new();
+        let mut tokens: Vec<TokenFrame> = Vec::new();
+
+        let file = File::open(file_path)?;
+        let reader = BufReader::new(file);
+
+        for line in reader.lines() {
+            lexer.read_line(&line?);
+            while let Some(frame) = lexer.next_token() {
+                tokens.push(frame);
+            }
+        }
+
+        let mut parser = Parser::new(tokens);
+        Ok(create_program(&mut parser))
+    }
+
     pub fn parse_source(lines: Vec<&str>) -> Program {
         let mut lexer = Lexer::new();
         let mut lines_iter = lines.into_iter();

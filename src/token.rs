@@ -1,4 +1,6 @@
-#[derive(Debug, PartialEq, Clone)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum Token {
     EOF,
     Error(TokenError),
@@ -59,7 +61,7 @@ pub enum Token {
     Semi,             // ;
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum TokenError {
     Illegal(char),
     UnterminatedCharLiteral,
@@ -68,7 +70,7 @@ pub enum TokenError {
     MalformedDecimal,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum Keyword {
     AS,
     ASYNC,
@@ -94,21 +96,21 @@ pub enum Keyword {
     WHILE,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum NumberKind {
     Integer,
     Decimal,
     Hexadecimal,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Number {
     pub kind: NumberKind,
     pub value: String,
     pub postfix: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct TokenFrame {
     pub token: Token,
     pub start: usize,
